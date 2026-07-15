@@ -34,6 +34,17 @@ const PUBLIC_CATS = CATEGORIES.map(c => ({ id:c.id, emo:c.emo, name:c.name, coun
 
 /* ---- helpers ---- */
 const rand = a => a[Math.floor(Math.random() * a.length)];
+// Fisher-Yates. `arr.sort(() => Math.random() - .5)` looks like a shuffle but is
+// heavily biased on small arrays (V8's sort keeps early elements disproportionately
+// in place) — that's why the same player kept ending up as the imposter.
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from({length:4}, () => rand([...CODE_CHARS])).join("");
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -120,18 +131,18 @@ function startRound(room) {
   const pool = CATEGORIES.filter(c => room.settings.categories.includes(c.id));
   const cat = rand(pool.length ? pool : CATEGORIES);
   const word = rand(cat.words);
-  const decoys = cat.words.filter(w => w !== word).sort(() => Math.random() - .5);
+  const decoys = shuffle(cat.words.filter(w => w !== word));
   const hintWords = decoys.slice(0, 3);
 
   const ids = [...room.players.keys()];
-  const shuffled = [...ids].sort(() => Math.random() - .5);
+  const shuffledForImposter = shuffle(ids);
   const impCount = Math.min(room.settings.imposters, Math.max(1, ids.length - 2));
-  const imposterIds = new Set(shuffled.slice(0, impCount));
+  const imposterIds = new Set(shuffledForImposter.slice(0, impCount));
 
   room.round = {
     word, catId: cat.id, catName: cat.name, hintWords,
     imposterIds,
-    order: [...ids].sort(() => Math.random() - .5),
+    order: shuffle(ids),
     turnIndex: 0,
     roundNo: 0,
     clues: [],

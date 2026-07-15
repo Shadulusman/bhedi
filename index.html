@@ -562,6 +562,16 @@ const S = {
 const $=(s,el=document)=>el.querySelector(s);
 const $$=(s,el=document)=>[...el.querySelectorAll(s)];
 const rand=a=>a[Math.floor(Math.random()*a.length)];
+// Fisher-Yates. `arr.sort(()=>Math.random()-.5)` looks like a shuffle but is
+// heavily biased on small arrays, so the same player kept ending up as the imposter.
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
 const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
 
 /* ---- tiny synth audio ---- */
@@ -587,10 +597,12 @@ const sfx={
    navigation
    ========================================================= */
 function go(id){
+  const el=$("#s-"+id);
+  if(el.classList.contains("active")) return; // already showing — don't retrigger the transition
   $$(".screen").forEach(s=>s.classList.remove("active"));
-  $("#s-"+id).classList.add("active");
-  $("#s-"+id).scrollTop=0;
-  const sc=$(".scroll",$("#s-"+id)); if(sc) sc.scrollTop=0;
+  el.classList.add("active");
+  el.scrollTop=0;
+  const sc=$(".scroll",el); if(sc) sc.scrollTop=0;
 }
 
 /* =========================================================
@@ -664,7 +676,7 @@ function buildRound(){
   // assign imposters
   const order=[...S.players.keys()];
   const impSet=new Set();
-  const shuffled=[...order].sort(()=>Math.random()-.5);
+  const shuffled=shuffle(order);
   for(let i=0;i<S.imposters;i++)impSet.add(shuffled[i]);
   S.round={cat, word, hintWords, impSet};
   S.revealIdx=0;

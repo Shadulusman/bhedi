@@ -471,7 +471,11 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
   <!-- ===== ROLE REVEAL ===== -->
   <section class="screen" id="s-role">
-    <div class="topbar"><div class="stage-count">Your role</div><div style="width:40px"></div></div>
+    <div class="topbar"><div class="stage-count">Your role</div>
+      <button class="iconbtn" id="roleLeave" aria-label="Leave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <div class="center-pad">
       <div class="deck">
         <div class="card" id="roleCard">
@@ -518,7 +522,11 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
   <!-- ===== VOTE ===== -->
   <section class="screen" id="s-ovote">
-    <div class="topbar"><div class="stage-count">The verdict</div><div style="width:40px"></div></div>
+    <div class="topbar"><div class="stage-count">The verdict</div>
+      <button class="iconbtn" id="voteLeave" aria-label="Leave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <div class="scroll">
       <div style="text-align:center;padding:8px 0 20px;">
         <h2 style="font-size:25px;margin-bottom:6px;">Who's the bhedi?</h2>
@@ -540,7 +548,11 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
   <!-- ===== RESULTS ===== -->
   <section class="screen" id="s-oresults">
-    <div class="topbar"><div class="stage-count">Round over</div><div style="width:40px"></div></div>
+    <div class="topbar"><div class="stage-count">Round over</div>
+      <button class="iconbtn" id="resultsLeave" aria-label="Leave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <div class="scroll">
       <div style="text-align:center;padding:14px 0 4px;">
         <div class="stage-count" id="oKicker">Verdict</div>
@@ -609,8 +621,9 @@ const S = {
 };
 
 function go(id){
-  $$(".screen").forEach(s=>s.classList.remove("active"));
   const el = $("#s-"+id);
+  if (el.classList.contains("active")) return; // already showing — don't retrigger the transition
+  $$(".screen").forEach(s=>s.classList.remove("active"));
   el.classList.add("active");
   const sc = $(".scroll", el); if(sc) sc.scrollTop = 0;
 }
@@ -731,6 +744,9 @@ function leave(){
 }
 $("#leaveBtn").addEventListener("click", leave);
 $("#playLeave").addEventListener("click", leave);
+$("#roleLeave").addEventListener("click", leave);
+$("#voteLeave").addEventListener("click", leave);
+$("#resultsLeave").addEventListener("click", leave);
 
 /* ---------- role card ---------- */
 $("#roleCard").addEventListener("click", () => {
