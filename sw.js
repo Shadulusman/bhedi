@@ -1,9 +1,10 @@
-const CACHE = "nocap-v1";
+const CACHE = "nocap-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./online.html",
   "./manifest.json",
+  "./icons/nocap-logo.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-180.png"
@@ -38,8 +39,12 @@ self.addEventListener("fetch", (e) => {
     caches.match(req).then((cached) =>
       cached ||
       fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        // only cache real successes — caching a 404/opaque error would otherwise
+        // "stick" (e.g. a logo requested before it deployed showed as broken forever)
+        if (res && res.ok && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return res;
       }).catch(() => cached)
     )
