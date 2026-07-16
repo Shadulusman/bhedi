@@ -75,9 +75,17 @@ try:
             cur.click("#sendClue"); cur.wait_for_timeout(600); g+=1
         ok("clues flowed, reached voting", host.evaluate("()=>S.state.status")=="voting")
         impid=imp.evaluate("()=>S.youId")
-        for pg in pages: pg.locator(f'.vote-cell[data-id="{impid}"]').click(); pg.wait_for_timeout(300)
-        host.wait_for_timeout(800)
-        ok("results reached", host.evaluate("()=>S.state.status")=="results")
+        order=host.evaluate("()=>S.state.round.order")
+        civ_target=next(o["id"] for o in order if o["id"]!=impid)
+        for pg in pages:
+            me=pg.evaluate("()=>S.youId")
+            target=civ_target if me==impid else impid
+            btn=pg.locator(f'.v-btn[data-id="{target}"]')
+            if btn.count()>0: btn.click()
+            pg.wait_for_timeout(200)
+        host.wait_for_timeout(1000)
+        ok("results reached (imposter voted out -> civilians win)", host.evaluate("()=>S.state.status")=="results")
+        ok("winner is civilians", host.evaluate("()=>S.state.results.winner")=="civilians")
         host.screenshot(path="live_results.png")
         b.close()
 finally:

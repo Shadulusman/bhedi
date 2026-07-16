@@ -94,24 +94,36 @@ function sanitize(room, pid) {
     const r = room.round;
     const amImp = r.imposterIds.has(pid);
     const turnId = r.order[r.turnIndex];
+    const alive = new Set(aliveIds(room));
     base.round = {
+      phase: room.status,                         // "playing" | "voting"
       turnPlayerId: room.status === "playing" ? turnId : null,
       turnName: room.status === "playing" && room.players.get(turnId) ? room.players.get(turnId).name : null,
-      roundNo: r.roundNo + 1,
-      roundsTotal: room.settings.rounds,
-      order: r.order.map(id => ({
-        id, name: room.players.get(id) ? room.players.get(id).name : "?",
-        connected: room.players.get(id) ? room.players.get(id).connected : false,
-      })),
+      roundNo: r.roundNo,
+      imposters: r.imposterIds.size,
+      threshold: voteThreshold(room),             // votes needed to eliminate someone
+      // roster in turn order — each player's alive/dead + connection + cumulative votes.
+      // NOTE: never leak who the imposter is here.
+      order: r.order.map(id => {
+        const p = room.players.get(id);
+        return {
+          id, name: p ? p.name : "?",
+          connected: p ? p.connected : false,
+          dead: r.dead.has(id),
+          votes: r.tally.get(id) || 0,            // cumulative votes received (the badge)
+          gone: !p,                               // kicked / left entirely
+        };
+      }),
       turnIndex: r.turnIndex,
       clues: r.clues.map(c => ({ playerId: c.playerId, name: c.name, words: c.words, roundNo: c.roundNo })),
       yourRole: amImp ? "imposter" : "civilian",
       yourWord: amImp ? null : r.word,
+      yourAlive: !r.dead.has(pid),
       category: r.catName,
       yourHint: amImp ? { category: room.settings.seeCat ? r.catName : null, words: room.settings.hint ? r.hintWords : null } : null,
       voting: room.status === "voting",
       votesIn: r.votes.size,
-      totalVoters: players.filter(p => p.connected).length,
+      totalVoters: [...alive].filter(id => room.players.get(id) && room.players.get(id).connected).length,
       yourVote: r.votes.get(pid) || null,
       voteDeadline: r.voteDeadline || null,
     };
@@ -151,24 +163,41 @@ function startRound(room) {
     imposterIds,
     order: shuffle(ids),
     turnIndex: 0,
-    roundNo: 0,
+    roundNo: 1,          // game rounds: clue pass + vote, repeats until a side wins
     clues: [],
-    votes: new Map(),
+    votes: new Map(),    // current vote phase: voterId -> targetId
+    tally: new Map(),    // CUMULATIVE votes received across rounds: id -> count
+    dead: new Set(),     // eliminated player ids
+    deaths: [],          // [{id, roundNo}] in elimination order (for the reveal)
     result: null,
   };
   room.status = "playing";
-  skipDisconnectedTurns(room);
+  skipUnavailableTurns(room);
 }
 
-function skipDisconnectedTurns(room) {
+// alive = still in the game (not eliminated) and present as a player.
+const aliveIds = room => room.round.order.filter(id => room.players.has(id) && !room.round.dead.has(id));
+const aliveImposters = room => aliveIds(room).filter(id => room.round.imposterIds.has(id));
+const aliveCivilians = room => aliveIds(room).filter(id => !room.round.imposterIds.has(id));
+// majority of the players still alive (5 alive -> 3, 7 -> 4). Recomputed as people die.
+const voteThreshold = room => Math.floor(aliveIds(room).length / 2) + 1;
+// can act this instant: alive, connected, and (for turns) it's a real player
+const isAvailable = (room, id) => {
+  const p = room.players.get(id);
+  return !!p && p.connected && !room.round.dead.has(id);
+};
+
+// Advance turnIndex to the next alive+connected player; if the clue pass is done
+// (or nobody can act), move on to the vote phase.
+function skipUnavailableTurns(room) {
   const r = room.round;
   let guard = 0;
-  while (guard++ < r.order.length) {
-    const cur = room.players.get(r.order[r.turnIndex]);
-    if (cur && cur.connected) return;
-    advanceTurn(room, true);
-    if (room.status !== "playing") return;
+  while (guard++ <= r.order.length) {
+    if (r.turnIndex >= r.order.length) { startVotePhase(room); return; }
+    if (isAvailable(room, r.order[r.turnIndex])) return;
+    r.turnIndex++;
   }
+  startVotePhase(room);
 }
 
 const VOTE_SECONDS = Number(process.env.VOTE_SECONDS) || 30; // override in tests only
@@ -214,52 +243,76 @@ function scheduleVoteTimeout(room) {
   r.voteDeadline = now() + VOTE_SECONDS * 1000;
   r.voteTimer = setTimeout(() => {
     if (room.round === r && room.status === "voting") {
-      tallyAndFinish(room);
+      resolveVote(room);
       broadcast(room);
     }
   }, VOTE_SECONDS * 1000);
 }
 
-function advanceTurn(room, silent) {
-  const r = room.round;
-  r.turnIndex++;
-  if (r.turnIndex >= r.order.length) {
-    r.turnIndex = 0;
-    r.roundNo++;
-    if (r.roundNo >= room.settings.rounds) {
-      room.status = "voting";
-      scheduleVoteTimeout(room);
-      return;
-    }
-  }
-  if (!silent) skipDisconnectedTurns(room);
+// After the clue pass, everyone alive votes. Votes pile onto the cumulative tally.
+function startVotePhase(room) {
+  room.status = "voting";
+  room.round.votes = new Map();
+  scheduleVoteTimeout(room);
 }
 
-function tallyAndFinish(room) {
+function advanceTurn(room) {
+  room.round.turnIndex++;
+  skipUnavailableTurns(room);
+}
+
+// Tally this phase's votes into the running totals, eliminate anyone at/over the
+// majority threshold, then check win conditions. Civilians win when all imposters
+// are out; imposters win when they equal/outnumber remaining civilians; otherwise
+// a new clue round starts (cumulative votes carry over).
+function resolveVote(room) {
   const r = room.round;
   if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
-  const counts = new Map();
-  for (const target of r.votes.values()) counts.set(target, (counts.get(target) || 0) + 1);
-  let votedOutId = null, max = 0, tie = false;
-  for (const [id, c] of counts) {
-    if (c > max) { max = c; votedOutId = id; tie = false; }
-    else if (c === max) tie = true;
-  }
-  if (tie) votedOutId = null;
-  const votedOutIsImp = votedOutId != null && r.imposterIds.has(votedOutId);
-  const imposterWon = !votedOutIsImp; // caught an imposter => civilians win
+  for (const target of r.votes.values()) r.tally.set(target, (r.tally.get(target) || 0) + 1);
+  const threshold = voteThreshold(room);
+  const eliminated = aliveIds(room).filter(id => (r.tally.get(id) || 0) >= threshold);
+  for (const id of eliminated) { r.dead.add(id); r.deaths.push({ id, roundNo: r.roundNo }); }
+  r.lastEliminated = eliminated;
+
+  const impAlive = aliveImposters(room).length;
+  const civAlive = aliveCivilians(room).length;
+  if (impAlive === 0) return endGame(room, "civilians");
+  if (impAlive >= civAlive) return endGame(room, "imposters");
+
+  // no winner yet — go around again
+  r.roundNo++;
+  r.votes = new Map();
+  r.turnIndex = 0;
+  room.status = "playing";
+  skipUnavailableTurns(room);
+}
+
+// Resolve the current vote as soon as every alive+connected player has voted.
+function maybeResolveVotes(room) {
+  if (room.status !== "voting" || !room.round) return;
+  const alive = aliveIds(room);
+  const voters = alive.filter(id => room.players.get(id) && room.players.get(id).connected).length;
+  if (voters > 0 && room.round.votes.size >= voters) resolveVote(room);
+}
+
+function endGame(room, winner) {
+  const r = room.round;
+  if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
   r.result = {
+    winner,                                  // "civilians" | "imposters"
     word: r.word,
     catName: r.catName,
-    votedOutId,
-    votedOutName: votedOutId ? (room.players.get(votedOutId)?.name || "—") : null,
-    imposterWon,
     imposterIds: [...r.imposterIds],
-    players: [...room.players.values()].map(p => ({
-      id: p.id, name: p.name,
-      role: r.imposterIds.has(p.id) ? "imposter" : "civilian",
-      votes: counts.get(p.id) || 0,
-    })),
+    lastEliminated: r.lastEliminated || [],
+    players: r.order.map(id => {
+      const p = room.players.get(id);
+      return {
+        id, name: p ? p.name : "—",
+        role: r.imposterIds.has(id) ? "imposter" : "civilian",
+        dead: r.dead.has(id),
+        votes: r.tally.get(id) || 0,
+      };
+    }),
     clues: r.clues.map(c => ({ name: c.name, words: c.words })),
   };
   room.status = "results";
@@ -440,7 +493,7 @@ wss.on("connection", (ws) => {
 
     if (t === "clue" && room.status === "playing") {
       const r = room.round;
-      if (r.order[r.turnIndex] !== pid) return sendErr(ws, "Not your turn.");
+      if (r.order[r.turnIndex] !== pid || !isAvailable(room, pid)) return sendErr(ws, "Not your turn.");
       let words = Array.isArray(msg.words) ? msg.words : [];
       words = words.map(w => String(w || "").trim().slice(0, 22)).filter(Boolean).slice(0, 1);
       if (words.length === 0) return sendErr(ws, "Type your clue word.");
@@ -452,16 +505,33 @@ wss.on("connection", (ws) => {
 
     if (t === "vote" && room.status === "voting") {
       const r = room.round;
-      if (!room.players.has(msg.targetId)) return;
+      if (!isAvailable(room, pid)) return;                     // eliminated / gone can't vote
+      const alive = aliveIds(room);
+      if (!alive.includes(msg.targetId)) return;               // can only vote a living player
       r.votes.set(pid, msg.targetId);
-      const voters = [...room.players.values()].filter(p => p.connected).length;
-      if (r.votes.size >= voters) tallyAndFinish(room);
+      const voters = alive.filter(id => room.players.get(id).connected).length;
+      if (r.votes.size >= voters) resolveVote(room);
       broadcast(room);
       return;
     }
 
     if (t === "forceReveal" && room.hostId === pid && room.status === "voting") {
-      tallyAndFinish(room);
+      resolveVote(room);   // resolve this round's vote now (may or may not end the game)
+      broadcast(room);
+      return;
+    }
+
+    if (t === "kick" && room.hostId === pid) {
+      const target = room.players.get(msg.targetId);
+      if (!target || target.id === pid) return;   // can't kick yourself / nobody
+      try { target.ws.send(JSON.stringify({ type: "kicked" })); } catch (e) {}
+      try { target.ws.close(); } catch (e) {}
+      room.players.delete(msg.targetId);
+      if (room.round) { room.round.dead.add(msg.targetId); }   // drop out of any running game
+      reassignHostIfNeeded(room);
+      refreshAutoStart(room);
+      if (room.status === "playing" && room.round.order[room.round.turnIndex] === msg.targetId) skipUnavailableTurns(room);
+      if (room.status === "voting") maybeResolveVotes(room);
       broadcast(room);
       return;
     }
@@ -506,13 +576,10 @@ wss.on("connection", (ws) => {
     refreshAutoStart(room);
     // if it was this player's turn, skip on
     if (room.status === "playing" && room.round.order[room.round.turnIndex] === pid) {
-      skipDisconnectedTurns(room);
+      skipUnavailableTurns(room);
     }
-    // if voting and this player leaving completes the vote
-    if (room.status === "voting") {
-      const voters = [...room.players.values()].filter(x => x.connected).length;
-      if (room.round.votes.size >= voters && voters > 0) tallyAndFinish(room);
-    }
+    // if the drop means everyone still present has voted, resolve now
+    maybeResolveVotes(room);
     broadcast(room);
   });
 });

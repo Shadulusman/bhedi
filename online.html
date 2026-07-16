@@ -449,6 +449,58 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .sec-head h3{letter-spacing:.06em;font-size:14px;}
 .mode-card .mt,.rc-name,.turn-banner .n{letter-spacing:.02em;}
 .rc-join{box-shadow:0 6px 16px -6px rgba(30,127,224,.6);}
+
+/* ---- play-screen player list (status per player) ---- */
+.pf-row{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);border:1px solid var(--line-soft);border-bottom:none;}
+.pf-row:first-child{border-radius:var(--r-md) var(--r-md) 0 0;}
+.pf-row:last-child{border-radius:0 0 var(--r-md) var(--r-md);border-bottom:1px solid var(--line-soft);}
+.pf-row.turn-now{background:linear-gradient(180deg,rgba(30,127,224,.08),transparent);border-color:rgba(30,127,224,.4);}
+.pf-row.dead{opacity:.5;}
+.pf-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:15px;color:#fff;}
+.pf-b{flex:1;min-width:0;}
+.pf-nm{font-family:var(--ff-disp);font-weight:700;font-size:16px;color:var(--cream);display:flex;align-items:center;gap:7px;}
+.pf-you{font-family:var(--ff-body);font-size:11px;font-weight:700;color:var(--blue-ink);background:rgba(30,127,224,.14);padding:2px 8px;border-radius:100px;}
+.pf-word{font-family:var(--ff-disp);font-weight:700;font-size:19px;color:var(--cream);margin-top:1px;}
+.pf-muted{font-size:14px;color:var(--muted-2);font-weight:600;}
+.pf-killed{font-family:var(--ff-disp);font-weight:700;font-size:16px;color:var(--muted-2);}
+.pf-typing{display:inline-flex;gap:4px;padding:6px 0 2px;}
+.pf-typing i{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:tdot 1s infinite;}
+.pf-typing i:nth-child(2){animation-delay:.15s;}.pf-typing i:nth-child(3){animation-delay:.3s;}
+@keyframes tdot{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
+
+/* ---- vote list (reference-style rows) ---- */
+.vhdr-chips{display:flex;gap:6px;}
+.vote-list{display:flex;flex-direction:column;}
+.vrow{display:flex;align-items:center;gap:11px;padding:13px 14px;background:var(--surface);border:1px solid var(--line-soft);border-bottom:none;}
+.vrow:first-child{border-radius:var(--r-md) var(--r-md) 0 0;}
+.vrow:last-child{border-radius:0 0 var(--r-md) var(--r-md);border-bottom:1px solid var(--line-soft);}
+.vrow.picked{background:linear-gradient(180deg,rgba(30,127,224,.08),transparent);border-color:rgba(30,127,224,.5);}
+.vrow.dead{opacity:.5;}
+.vr-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:16px;color:#fff;}
+.vr-b{flex:1;min-width:0;}
+.vr-nm{font-family:var(--ff-disp);font-weight:700;font-size:15px;color:var(--muted);display:flex;align-items:center;gap:7px;}
+.vr-clue{font-family:var(--ff-disp);font-weight:800;font-size:20px;color:var(--cream);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.v-badge{flex:none;min-width:26px;height:26px;padding:0 7px;border-radius:100px;background:var(--gold);color:#fff;font-family:var(--ff-disp);font-weight:800;font-size:13px;display:grid;place-items:center;}
+.v-btn{flex:none;border:none;background:#16181F;color:#fff;font-family:var(--ff-disp);font-weight:700;font-size:14px;padding:11px 20px;border-radius:100px;cursor:pointer;transition:.14s;}
+.v-btn:active{transform:scale(.95);}
+.v-btn.voted{background:var(--surface);color:var(--cream);border:1.5px solid var(--line);}
+.v-youtag{flex:none;font-family:var(--ff-body);font-size:12px;font-weight:700;color:var(--blue-ink);background:rgba(30,127,224,.14);padding:6px 12px;border-radius:100px;}
+
+/* ---- results: win/lose card + reveal ---- */
+.result-card{border-radius:var(--r-lg);padding:28px 22px 24px;text-align:center;color:#fff;margin:6px 0 18px;box-shadow:var(--shadow);}
+.result-card.civ{background:linear-gradient(160deg,#25A55F,#12A05C);}
+.result-card.imp{background:linear-gradient(160deg,#F5434F,#E11D2A);}
+.rc-mask{width:96px;height:96px;border-radius:50%;background:#fff;display:grid;place-items:center;margin:0 auto 16px;}
+.rc-mask svg{width:60px;height:60px;}
+.rc-kick{font-family:var(--ff-mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;opacity:.85;}
+.result-card .verdict{font-family:var(--ff-disp);font-weight:800;font-size:34px;line-height:1.05;margin:8px 0 8px;color:#fff;}
+.rc-sub{font-size:15px;line-height:1.4;opacity:.92;margin:0 auto;max-width:28ch;}
+.rev-row.dead{opacity:.6;}
+.rv-nm{font-family:var(--ff-disp);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;}
+.rv-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+.rv-tags{display:flex;align-items:center;gap:6px;flex:none;}
+.rv-dead{font-family:var(--ff-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:5px 9px;border-radius:100px;background:rgba(225,29,42,.12);color:var(--gold-ink);}
+.rev-row .who{gap:12px;}
 </style>
 </head>
 <body>
@@ -567,11 +619,6 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
         <div class="sec-head"><h3>Round settings</h3><span class="hint">Host only</span></div>
 
         <div class="setting">
-          <div class="txt"><h4>Clue rounds</h4><p>Everyone types one word, in turn. This is how many times the circle goes around.</p></div>
-          <div class="stepper"><button id="rMinus">−</button><span id="rCount">2</span><button id="rPlus">+</button></div>
-        </div>
-
-        <div class="setting">
           <div class="txt"><h4>Imposters</h4><p>Needs 5+ players for two.</p></div>
           <div class="stepper"><button id="iMinus">−</button><span id="iCount">1</span><button id="iPlus">+</button></div>
         </div>
@@ -668,31 +715,35 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
   <!-- ===== VOTE ===== -->
   <section class="screen" id="s-ovote">
-    <div class="topbar"><div class="stage-count">The verdict</div>
-      <button class="iconbtn" id="voteLeave" aria-label="Leave">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+    <div class="topbar"><div class="stage-count" id="voteRoundTop">Round 1</div>
+      <div class="topbar-actions">
+        <button class="iconbtn chat-btn hidden" id="voteChatBtn" aria-label="Chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-11.9 7.8L3 21l1.8-5.3A8.5 8.5 0 1 1 21 11.5Z"/></svg>
+          <span class="badge hidden" id="voteChatBadge">0</span>
+        </button>
+        <button class="iconbtn" id="voteLeave" aria-label="Leave">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
     </div>
     <div class="scroll">
-      <div style="text-align:center;padding:8px 0 20px;">
-        <h2 style="font-size:25px;margin-bottom:6px;">Who's the imposter?</h2>
-        <p class="pass-sub" style="margin:0;">Everyone votes. Results show when the last vote lands.</p>
+      <div style="text-align:center;padding:8px 0 4px;">
+        <h2 style="font-size:26px;margin-bottom:8px;">Vote for the imposter</h2>
+        <p class="pass-sub" id="voteSub" style="margin:0;">Reach the vote limit and you're out! Votes add up across rounds.</p>
       </div>
       <div class="vote-timer" id="voteTimer">
         <div class="vt-bar"><div class="vt-fill" id="voteTimerFill"></div></div>
         <div class="vt-txt" id="voteTimerTxt">30s to vote</div>
       </div>
-      <div class="vote-grid" id="oVoteGrid"></div>
-      <div class="vprog" id="voteProg">—</div>
-      <div style="height:14px"></div>
-      <div class="section">
-        <div class="sec-head"><h3 style="font-size:14px;">The clues</h3></div>
-        <div class="feed" id="voteFeed"></div>
+      <div class="sec-head" style="margin-top:4px;"><h3 style="font-size:14px;">Players &amp; clues</h3>
+        <div class="vhdr-chips"><span class="rc-chip" id="voteImpChip">1 Imposter</span><span class="rc-chip" id="voteRoundChip">Round 1</span></div>
       </div>
+      <div class="vote-list" id="oVoteGrid"></div>
+      <div class="vprog" id="voteProg">—</div>
       <div style="height:10px"></div>
     </div>
     <div class="footer hidden" id="forceFooter">
-      <button class="cta ghost" id="forceReveal">Reveal now (host)</button>
+      <button class="cta ghost" id="forceReveal">End vote now (host)</button>
     </div>
   </section>
 
@@ -704,16 +755,19 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
       </button>
     </div>
     <div class="scroll">
-      <div style="text-align:center;padding:14px 0 4px;">
-        <div class="stage-count" id="oKicker">Verdict</div>
-        <div class="verdict" id="oVerdict" style="margin-top:10px;">—</div>
-        <p class="pass-sub" id="oSub" style="max-width:32ch;margin:0 auto 4px;">—</p>
+      <div class="result-card civ" id="resultCard">
+        <div class="rc-mask">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 9c2.4-2 6-3 9-3s6.6 1 9 3c-1 2.6-2.4 4-4.2 4-1.5 0-2.4-.7-2.9-1.6-.4-.7-1.1-1.2-1.9-1.2s-1.5.5-1.9 1.2C9.6 12.3 8.7 13 7.2 13 5.4 13 4 11.6 3 9Z" fill="#16181F"/><circle cx="7.2" cy="9.3" r="1.15" fill="#fff"/><circle cx="16.8" cy="9.3" r="1.15" fill="#fff"/></svg>
+        </div>
+        <div class="rc-kick">Game over</div>
+        <div class="verdict" id="oVerdict">—</div>
+        <p class="rc-sub" id="oSub">—</p>
       </div>
       <div class="word-reveal">
         <div class="l">The secret word was</div>
         <div class="w" id="oWord">—</div>
-        <div class="c" id="oCat">—</div>
       </div>
+      <div class="sec-head" style="margin-top:6px;"><h3 style="font-size:14px;">The reveal</h3></div>
       <div class="reveal-list" id="oList"></div>
       <div style="height:10px"></div>
     </div>
@@ -932,8 +986,6 @@ $("#goBtn").addEventListener("click", () => {
 /* ---------- lobby controls ---------- */
 function pushSettings(patch){ send({ type:"settings", settings: patch }); buzz(8); }
 const st = () => (S.state && S.state.settings) || {};
-$("#rMinus").addEventListener("click", ()=>pushSettings({ rounds: Math.max(1,(st().rounds||2)-1) }));
-$("#rPlus") .addEventListener("click", ()=>pushSettings({ rounds: Math.min(3,(st().rounds||2)+1) }));
 $("#iMinus").addEventListener("click", ()=>pushSettings({ imposters: Math.max(1,(st().imposters||1)-1) }));
 $("#iPlus") .addEventListener("click", ()=>pushSettings({ imposters: Math.min(2,(st().imposters||1)+1) }));
 $("#oCat").addEventListener("click", ()=>pushSettings({ seeCat: !st().seeCat }));
@@ -992,6 +1044,7 @@ function sendChat(){
 }
 $("#lobbyChatBtn").addEventListener("click", openChat);
 $("#playChatBtn").addEventListener("click", openChat);
+$("#voteChatBtn").addEventListener("click", openChat);
 $("#chatClose").addEventListener("click", closeChat);
 $("#chatScrim").addEventListener("click", closeChat);
 $("#chatSend").addEventListener("click", sendChat);
@@ -1016,7 +1069,7 @@ function refreshChatButtons(){
   const enabled = !!(S.state && S.state.settings && S.state.settings.chat);
   const total = (S.state && S.state.chat) ? S.state.chat.length : 0;
   const unread = Math.max(0, total - S.chatSeen);
-  ["lobby","play"].forEach(scr => {
+  ["lobby","play","vote"].forEach(scr => {
     const btn = $("#"+scr+"ChatBtn"), badge = $("#"+scr+"ChatBadge");
     if (!btn) return;
     btn.classList.toggle("hidden", !enabled);
@@ -1069,8 +1122,8 @@ $("#sendClue").addEventListener("click", () => {
 
 /* ---------- vote ---------- */
 $("#oVoteGrid").addEventListener("click", e => {
-  const c = e.target.closest(".vote-cell"); if(!c) return;
-  send({ type:"vote", targetId: c.dataset.id }); buzz(12);
+  const btn = e.target.closest(".v-btn"); if(!btn) return;
+  send({ type:"vote", targetId: btn.dataset.id }); buzz(12);
 });
 $("#forceReveal").addEventListener("click", () => send({ type:"forceReveal" }));
 $("#oAgain").addEventListener("click", () => { buzz(14); send({ type:"again" }); });
@@ -1151,7 +1204,6 @@ function renderLobby(){
   }
 
   if (s.isHost) {
-    $("#rCount").textContent = s.settings.rounds;
     $("#iCount").textContent = s.settings.imposters;
     $("#oCat").classList.toggle("on", s.settings.seeCat);
     $("#oHint").classList.toggle("on", s.settings.hint);
@@ -1168,7 +1220,7 @@ function renderLobby(){
     const enough = s.players.length >= 3;
     $("#startOnline").disabled = !enough;
     $("#lobbyNote").textContent = enough
-      ? `${s.players.length} players · one word at a time · ${s.settings.rounds} clue round${s.settings.rounds>1?"s":""} each`
+      ? `${s.players.length} players · vote each round · last side standing wins`
       : `Need ${3-s.players.length} more player${3-s.players.length>1?"s":""}`;
   } else {
     $("#lobbyNote").textContent = "The host starts the game";
@@ -1178,38 +1230,32 @@ function renderLobby(){
 // One row per person, their words laid out horizontally in round order —
 // easier to track "what did X say" than a chronological list where everyone's
 // single clues are interleaved and stacked one below another.
-function feedGridHtml(r, highlightTurn){
-  if (!r.clues.length) return `<div class="feed-empty">No clues yet — first player is typing.</div>`;
-  return r.order.map((p,i) => {
-    const mine = r.clues.filter(c => c.playerId === p.id);
-    const isCurrent = highlightTurn && p.id === r.turnPlayerId;
-    const cells = Array.from({length: r.roundsTotal}, (_,ri) => {
-      const c = mine.find(m => m.roundNo === ri);
-      return c ? `<span class="fg-cell">${c.words[0]}</span>` : `<span class="fg-cell empty">·</span>`;
-    }).join("");
-    return `<div class="fg-row${isCurrent ? " turn-now" : ""}">
-      <div class="fg-who"><span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span><span class="fg-nm">${p.name}</span></div>
-      <div class="fg-words">${cells}</div>
-    </div>`;
-  }).join("");
-}
-
-function turnOrderHtml(r, youId){
-  const check = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
-  return r.order.map((p,i) => {
-    const state = i < r.turnIndex ? "done" : i === r.turnIndex ? "current" : "upcoming";
-    const you = p.id === youId ? " you" : "";
-    return `<div class="to-item ${state}${you}">
-      <span class="to-av" style="background:${AV[i%AV.length]}">${state==="done" ? check : initials(p.name)}</span>
-      <span class="to-nm">${p.id===youId?"You":p.name}</span>
+// Play-screen list: one row per player showing this round's status —
+// their clue word, "…" while typing, "Up next", or "Killed" if eliminated.
+function playFeedHtml(r, youId){
+  let nextId = null;
+  for (let k = r.turnIndex + 1; k < r.order.length; k++){
+    const q = r.order[k]; if (q && !q.dead && !q.gone && q.connected) { nextId = q.id; break; }
+  }
+  return r.order.map((p) => {
+    const clue = r.clues.find(c => c.playerId === p.id && c.roundNo === r.roundNo);
+    let st;
+    if (p.dead) st = `<span class="pf-killed">Killed</span>`;
+    else if (clue) st = `<span class="pf-word">${escapeHtml(clue.words[0])}</span>`;
+    else if (p.id === r.turnPlayerId) st = `<span class="pf-typing"><i></i><i></i><i></i></span>`;
+    else if (p.id === nextId) st = `<span class="pf-muted">Up next</span>`;
+    else st = `<span class="pf-muted">…</span>`;
+    return `<div class="pf-row${p.id===r.turnPlayerId?' turn-now':''}${p.dead?' dead':''}">
+      <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+      <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${p.id===youId?' <span class="pf-you">You</span>':''}</div>${st}</div>
     </div>`;
   }).join("");
 }
 
 function renderPlay(){
   const s = S.state, r = s.round; if(!r) return;
-  $("#playRound").textContent = `Clue round ${r.roundNo} of ${r.roundsTotal}`;
-  $("#turnOrder").innerHTML = turnOrderHtml(r, s.youId);
+  $("#playRound").textContent = `Round ${r.roundNo}`;
+  $("#turnOrder").innerHTML = `<span class="rc-chip">🕵️ ${r.imposters} Imposter${r.imposters>1?"s":""}</span><span class="rc-chip">Round ${r.roundNo}</span>`;
 
   const strip = $("#secretStrip");
   strip.className = "secret " + (r.yourRole==="imposter" ? "imp" : "civ");
@@ -1217,24 +1263,23 @@ function renderPlay(){
     $("#secretL").textContent = "You are the imposter";
     $("#secretW").textContent = r.yourHint && r.yourHint.category ? r.yourHint.category : "Bluff it";
   } else {
-    $("#secretL").textContent = "Your word";
+    $("#secretL").textContent = "Your secret word";
     $("#secretW").textContent = r.yourWord;
   }
   $("#secretW").classList.toggle("blurred", !S.peeked);
   $("#peekBtn").textContent = S.peeked ? "Hide" : "Show";
 
-  const mine = r.turnPlayerId === s.youId;
+  const dead = !r.yourAlive;
+  const mine = r.turnPlayerId === s.youId && !dead;
   const banner = $("#turnBanner");
   banner.classList.toggle("mine", mine);
-  $("#turnL").textContent = mine ? "It's your turn" : "Now typing";
-  $("#turnN").textContent = mine ? "Type your clue" : (r.turnName || "—");
+  $("#turnL").textContent = dead ? "You were eliminated" : (mine ? "It's your turn" : "Now typing");
+  $("#turnN").textContent = dead ? "Watch it play out" : (mine ? "Type your clue" : (r.turnName || "—"));
 
-  $("#feed").innerHTML = feedGridHtml(r, true);
+  $("#feed").innerHTML = playFeedHtml(r, s.youId);
 
-  // new clue sound
   const prevN = S.prev && S.prev.round ? S.prev.round.clues.length : 0;
   if (r.clues.length > prevN) sfx.clue();
-  // your turn alert
   const wasMine = S.prev && S.prev.round && S.prev.round.turnPlayerId === s.youId;
   if (mine && !wasMine) { sfx.yourTurn(); buzz([30,40,30]); }
 
@@ -1262,17 +1307,31 @@ function renderPlay(){
 
 function renderVote(){
   const s = S.state, r = s.round;
+  const iAmDead = !r.yourAlive;
+  $("#voteRoundTop").textContent = `Round ${r.roundNo}`;
+  $("#voteRoundChip").textContent = `Round ${r.roundNo}`;
+  $("#voteImpChip").textContent = `${r.imposters} Imposter${r.imposters>1?"s":""}`;
+  $("#voteSub").innerHTML = `Reach <b>${r.threshold} vote${r.threshold>1?"s":""}</b> and you're out! Votes add up across rounds.`;
+
   const g = $("#oVoteGrid"); g.innerHTML = "";
-  s.players.forEach((p,i) => {
-    const el = document.createElement("button");
-    el.className = "vote-cell" + (r.yourVote===p.id ? " picked":"");
-    el.dataset.id = p.id;
-    el.innerHTML = `<span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span>
-      <span class="nm">${p.name}${p.id===s.youId?" (you)":""}</span>`;
+  r.order.forEach((p) => {
+    const clue = r.clues.find(c => c.playerId === p.id && c.roundNo === r.roundNo);
+    const clueTxt = p.dead ? "Killed" : (clue ? clue.words[0] : "No clue");
+    const you = p.id === s.youId;
+    const votedThis = r.yourVote === p.id;
+    let btn = "";
+    if (!p.dead && !iAmDead && !you) btn = `<button class="v-btn${votedThis?' voted':''}" data-id="${p.id}">${votedThis?'Voted':'Vote'}</button>`;
+    else if (you) btn = `<span class="v-youtag">You</span>`;
+    const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
+    const el = document.createElement("div");
+    el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"");
+    el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+      <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</div>
+        <div class="vr-clue">${escapeHtml(clueTxt)}</div></div>
+      ${badge}${btn}`;
     g.appendChild(el);
   });
-  $("#voteProg").textContent = `${r.votesIn} of ${r.totalVoters} voted`;
-  $("#voteFeed").innerHTML = feedGridHtml(r);
+  $("#voteProg").textContent = iAmDead ? "You're out — watching the vote" : `${r.votesIn} of ${r.totalVoters} voted`;
   $("#forceFooter").classList.toggle("hidden", !s.isHost);
 
   clearInterval(S.voteTimerHandle);
@@ -1284,7 +1343,7 @@ function renderVote(){
       const pct = Math.max(0, Math.min(100, (remain / VOTE_MS) * 100));
       $("#voteTimerFill").style.width = pct + "%";
       $("#voteTimerFill").classList.toggle("warn", secs <= 10);
-      $("#voteTimerTxt").textContent = remain > 0 ? `${secs}s to vote` : "Revealing…";
+      $("#voteTimerTxt").textContent = remain > 0 ? `${secs}s to vote` : "Tallying…";
       if (remain <= 0) clearInterval(S.voteTimerHandle);
     };
     tick();
@@ -1294,39 +1353,32 @@ function renderVote(){
 
 function renderResults(){
   const s = S.state, res = s.results;
-  const vt = $("#oVerdict");
-  vt.classList.remove("caught","escaped");
-  if (res.votedOutId === null) {
-    $("#oKicker").textContent = "Split vote";
-    vt.textContent = "Tied.";
-    vt.style.color = "var(--gold-hi)";
-    $("#oSub").textContent = "No one was voted out — the imposter walks free.";
-    sfx.lose();
-  } else if (!res.imposterWon) {
-    $("#oKicker").textContent = "Verdict";
-    vt.textContent = "Caught!"; vt.classList.add("caught"); vt.style.color="";
-    $("#oSub").textContent = `${res.votedOutName} was the imposter. The group wins.`;
-    sfx.win(); buzz([40,30,80]);
-  } else {
-    $("#oKicker").textContent = "Verdict";
-    vt.textContent = "Got away."; vt.classList.add("escaped"); vt.style.color="";
-    $("#oSub").textContent = `${res.votedOutName} was innocent. The imposter wins.`;
-    sfx.lose(); buzz([80,40,80]);
-  }
+  const civWin = res.winner === "civilians";
+  const card = $("#resultCard");
+  card.className = "result-card " + (civWin ? "civ" : "imp");
+  $("#oVerdict").textContent = civWin ? "Civilians win!" : "Imposters win!";
+  $("#oSub").textContent = civWin
+    ? "The imposters were voted out. Good detective work."
+    : "The civilians can no longer outvote the imposters.";
+  (civWin ? sfx.win : sfx.lose)(); buzz(civWin ? [40,30,80] : [80,40,80]);
+
   $("#oWord").textContent = res.word;
-  $("#oCat").textContent = res.catName;
   const list = $("#oList"); list.innerHTML = "";
-  res.players.forEach((p,i) => {
+  res.players.forEach((p) => {
     const imp = p.role === "imposter";
-    const row = document.createElement("div"); row.className = "rev-row";
-    row.innerHTML = `<div class="who"><span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span>${p.name}
-      ${p.votes?`<span style="color:var(--muted);font-weight:400;font-size:12px;">· ${p.votes} vote${p.votes>1?"s":""}</span>`:""}</div>
-      <span class="role ${imp?'r-imp':'r-civ'}">${imp?'Imposter':'Knew it'}</span>`;
+    const you = p.id === s.youId;
+    const tags = `${p.dead?'<span class="rv-dead">Dead</span>':''}<span class="role ${imp?'r-imp':'r-civ'}">${imp?'Imposter':'Civilian'}</span>`;
+    const clueTxt = p.dead ? "Killed" : "";
+    const row = document.createElement("div"); row.className = "rev-row" + (p.dead?" dead":"");
+    row.innerHTML = `<div class="who"><span class="av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+      <div><div class="rv-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</div>
+      ${clueTxt?`<div class="rv-sub">${clueTxt}</div>`:(p.votes?`<div class="rv-sub">${p.votes} vote${p.votes>1?"s":""}</div>`:"")}</div></div>
+      <div class="rv-tags">${tags}</div>`;
     list.appendChild(row);
   });
   $("#oAgain").classList.toggle("hidden", !s.isHost);
   $("#oLobby").classList.toggle("hidden", !s.isHost);
-  $("#oNote").textContent = s.isHost ? "" : "Waiting for the host to deal again";
+  $("#oNote").textContent = s.isHost ? "" : "Waiting for the host to start again";
 }
 
 /* ---------- resume session ---------- */

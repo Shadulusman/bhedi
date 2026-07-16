@@ -48,9 +48,7 @@ try:
         ok("guest has no start button", not p2.locator("#startOnline").is_visible())
         p2.screenshot(path="ui_lobby_guest.png")
 
-        # host bumps clue rounds up then back down, then starts
-        host.click("#rPlus"); host.wait_for_timeout(300)   # 2 -> 3
-        host.click("#rMinus"); host.wait_for_timeout(300)  # back to 2
+        # host starts the game
         host.click("#startOnline"); host.wait_for_timeout(1000)
         ok("all reached role screen", all(pg.locator("#s-role").get_attribute("class").find("active")>=0 for pg in pages))
 
@@ -85,46 +83,44 @@ try:
         host.wait_for_timeout(400)
         ok("play screen active", "active" in host.locator("#s-play").get_attribute("class"))
 
-        # play clues in turn order — default 2 clue rounds x 3 players = 6 turns,
-        # one word per turn, turn order visibly cycling
-        names = ["Arjun","Meera","Rahul"]
+        # round 1: 3 players give one clue each, one word per turn, then it's vote time
         guard = 0
         while guard < 10:
             status = host.evaluate("() => S.state.status")
             if status != "playing": break
             turn_id = host.evaluate("() => S.state.round.turnPlayerId")
-            cur = None
-            for pg in pages:
-                if pg.evaluate("() => S.youId") == turn_id: cur = pg; break
+            cur = next((pg for pg in pages if pg.evaluate("() => S.youId") == turn_id), None)
             if cur is None: break
             inputs = cur.locator("#clueInputs input")
             ok(f"exactly one clue input shown (turn {guard})", inputs.count() == 1)
             inputs.nth(0).fill(f"clue{guard}")
             if guard == 0: cur.screenshot(path="ui_myturn.png")
-            cur.click("#sendClue"); cur.wait_for_timeout(700)
+            cur.click("#sendClue"); cur.wait_for_timeout(600)
             guard += 1
-        ok("6 clue turns sent (2 rounds x 3 players)", guard == 6)
+        ok("3 clue turns in round 1 (one pass, then vote)", guard == 3)
         host.wait_for_timeout(600)
-        ok("advanced to vote screen", "active" in host.locator("#s-ovote").get_attribute("class"))
-        # feed groups by person now: one row per player, their words alongside each other
-        vote_rows = host.locator("#voteFeed .fg-row")
-        ok("3 player rows in the clue feed (grouped, not one-per-clue)", vote_rows.count()==3)
-        ok("no empty clue cells left — everyone's 2 rounds filled in", host.locator("#voteFeed .fg-cell.empty").count()==0)
-        ok("2 words per person row (2 clue rounds)", vote_rows.first.locator(".fg-cell").count()==2)
+        ok("advanced to vote screen after the round", "active" in host.locator("#s-ovote").get_attribute("class"))
+        ok("vote screen lists all 3 players", host.locator("#oVoteGrid .vrow").count()==3)
+        ok("threshold text shows (Reach N votes)", "reach" in host.inner_text("#voteSub").lower())
         ok("vote countdown timer showing", "to vote" in host.inner_text("#voteTimerTxt").lower())
         host.screenshot(path="ui_vote.png")
 
-        # all vote the imposter
+        # everyone votes the imposter out (imposter throws their vote on a civilian)
         imp_id = imp_page.evaluate("() => S.youId")
+        civ_id = civ_page.evaluate("() => S.youId")
         for pg in pages:
-            pg.locator(f'.vote-cell[data-id="{imp_id}"]').click(); pg.wait_for_timeout(350)
-        host.wait_for_timeout(900)
-        ok("results screen reached", "active" in host.locator("#s-oresults").get_attribute("class"))
+            me = pg.evaluate("() => S.youId")
+            target = civ_id if me == imp_id else imp_id
+            btn = pg.locator(f'.v-btn[data-id="{target}"]')
+            if btn.count() > 0: btn.click()
+            pg.wait_for_timeout(250)
+        host.wait_for_timeout(1000)
+        ok("results screen reached (imposter caught)", "active" in host.locator("#s-oresults").get_attribute("class"))
         verdict = host.inner_text("#oVerdict").strip()
-        ok(f"verdict = Caught! (got '{verdict}')", "Caught" in verdict)
+        ok(f"verdict = Civilians win! (got '{verdict}')", "civilian" in verdict.lower())
         ok("word revealed to all", word.lower() in host.inner_text("#oWord").lower())
+        ok("imposter shown with Imposter tag in the reveal", "imposter" in host.inner_text("#oList").lower())
         host.screenshot(path="ui_results.png")
-        p2.screenshot(path="ui_results_guest.png")
 
         # play again
         host.click("#oAgain"); host.wait_for_timeout(1000)
