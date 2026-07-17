@@ -476,6 +476,9 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 .cmsg.me .who{text-align:right;margin:0 12px 3px 0;}
 .cmsg.me .bub{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#FFFFFF;border-color:transparent;}
 .chat-empty{text-align:center;color:var(--muted-2);font-size:13px;font-style:italic;margin:auto;padding:0 24px;}
+/* system line (joins/leaves) — a centred pill, not a normal bubble */
+.cmsg-sys{align-self:center;max-width:88%;text-align:center;background:rgba(20,24,40,.05);color:var(--muted-2);
+  font-size:12.5px;font-weight:700;padding:6px 14px;border-radius:100px;margin:2px 0;}
 .chat-input{display:flex;gap:8px;padding:10px 14px calc(var(--safe-b) + 12px);border-top:1px solid var(--line-soft);}
 .chat-input input{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--cream);border-radius:100px;padding:12px 16px;font-family:var(--ff-body);font-size:15px;outline:none;}
 .chat-input input:focus{border-color:var(--gold-deep);}
@@ -1299,6 +1302,7 @@ function renderChat(){
   if (!msgs.length) { box.innerHTML = `<div class="chat-empty">No messages yet — say hi 👋</div>`; }
   else {
     box.innerHTML = msgs.map(m => {
+      if (m.sys) return `<div class="cmsg-sys">${escapeHtml(m.text)}</div>`;
       const me = m.name === S.name;
       return `<div class="cmsg${me?" me":""}"><div class="who">${me?"You":escapeHtml(m.name)}</div><div class="bub">${escapeHtml(m.text)}</div></div>`;
     }).join("");
@@ -1324,7 +1328,7 @@ function refreshChatButtons(){
     badge.textContent = unread > 9 ? "9+" : unread;
     badge.classList.toggle("hidden", unread === 0);
     const last = total ? S.state.chat[total-1] : null;
-    $("#chatBarPrev").textContent = last ? `${last.name === S.name ? "You" : last.name}: ${last.text}` : "Tap to chat";
+    $("#chatBarPrev").textContent = last ? (last.sys ? last.text : `${last.name === S.name ? "You" : last.name}: ${last.text}`) : "Tap to chat";
   }
   if (!enabled && S.chatOpen) closeChat();
 }
@@ -1403,20 +1407,22 @@ function render(){
     renderLobby(); go("lobby");
   }
   else if (s.status === "playing") {
-    // Reveal the role card only at the START of a NEW GAME (from lobby / a finished
-    // game / a fresh reconnect) — NOT between rounds. New rounds arrive from
-    // "voting", and re-showing the card there was eating people's turns.
-    const newGame = prevStatus === "lobby" || prevStatus === "results" || prevStatus === undefined;
-    if (newGame) {
+    // ALWAYS keep the play screen (clue footer, feed) current on every playing
+    // snapshot — even while the role card is up. Previously this was skipped on a
+    // "new game" snapshot, so a stray one (e.g. a resume where prevStatus is
+    // undefined) left a player's turn with no typing box until the next snapshot
+    // (which is why opening chat "fixed" it). Rendering is cheap and idempotent.
+    renderPlay();
+    // A genuinely fresh game (from the lobby or a finished game) resets the role
+    // card. A mid-game resume (prevStatus undefined) shows it only if not yet seen.
+    const freshGame = prevStatus === "lobby" || prevStatus === "results";
+    if (freshGame) {
       S.roleSeen = false; S.peeked = true;
       $("#roleCard").classList.remove("flipped","civ","imp");
       $("#roleGo").classList.add("hidden");
-      go("role");
-    } else {
-      renderPlay();
-      // don't yank a player off the role card if they haven't tapped "I'm ready" yet
-      if (!$("#s-role").classList.contains("active")) go("play");
     }
+    if (!S.roleSeen) go("role");
+    else if (!$("#s-role").classList.contains("active")) go("play");
   }
   else if (s.status === "voting") { renderVote(); go("ovote"); }
   else if (s.status === "results") { renderResults(); go("oresults"); }
@@ -1583,10 +1589,12 @@ function renderPlay(){
     tickT(); S.turnTimerHandle = setInterval(tickT, 250);
   } else { clock.classList.add("hidden"); }
 
-  const prevN = S.prev && S.prev.round ? S.prev.round.clues.length : 0;
+  const prevN = S.prev && S.prev.round && S.prev.round.clues ? S.prev.round.clues.length : 0;
   if (r.clues.length > prevN) sfx.clue();
   const wasMine = S.prev && S.prev.round && S.prev.round.turnPlayerId === s.youId;
-  if (mine && !wasMine) { sfx.yourTurn(); buzz([30,40,30]); }
+  // only celebrate the turn once the player is actually on the play screen (renderPlay
+  // now also runs while the role card is up — don't fire the cue behind it)
+  if (mine && !wasMine && S.roleSeen) { sfx.yourTurn(); buzz([30,40,30]); }
 
   const foot = $("#clueFooter");
   if (mine) {

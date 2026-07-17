@@ -226,6 +226,15 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},70000);
   ok("chat hidden from state when disabled", cs[0].state.chat.length===0);
   cs.forEach(c=>c.close()); await wait(200);
 
+  // ---- SYSTEM CHAT (joins / leaves) ----
+  cs = await room(2,["Zoe","Yan"]);
+  ok("creator's join announced as a system line", cs[0].state.chat.some(m=>m.sys && m.text==="Zoe joined the room"));
+  ok("a joiner is announced too", cs[0].state.chat.some(m=>m.sys && m.text==="Yan joined the room"));
+  ok("system lines carry no name", cs[0].state.chat.filter(m=>m.sys).every(m=>!m.name));
+  cs[1].close(); await wait(300);
+  ok("a leave is announced as a system line", cs[0].state.chat.some(m=>m.sys && m.text==="Yan left the room"));
+  cs.forEach(c=>{ try{c.close()}catch(e){} }); await wait(200);
+
   console.log("\n"+(fail.length?"FAILURES: "+fail.join("; "):"ALL EDGE CASES PASSED"));
   process.exit(fail.length?1:0);
 })();

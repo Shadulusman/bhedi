@@ -89,7 +89,7 @@ function sanitize(room, pid) {
     catalog: PUBLIC_CATS,
     players,
     // In-game chat (host can disable). Kept small; broadcast with each snapshot.
-    chat: room.settings.chat ? room.chat.slice(-CHAT_KEEP).map(c => ({ id: c.id, name: c.name, text: c.text })) : [],
+    chat: room.settings.chat ? room.chat.slice(-CHAT_KEEP).map(c => ({ id: c.id, name: c.name, text: c.text, sys: !!c.sys })) : [],
     // Lobby auto-start countdown deadline (ms) so clients can render "Starts in 0:58".
     autoStartAt: room.status === "lobby" ? room.autoStartAt : null,
     autoStartPaused: room.status === "lobby" ? room.autoStartPaused : false,
@@ -238,6 +238,12 @@ function startTurnTimer(room) {
 const CHAT_KEEP = 50;         // most recent chat messages retained per room
 const CHAT_MAX_LEN = 160;
 const CHAT_MIN_GAP = 350;     // ms between a player's messages (light rate limit)
+// A system line in the chat feed (joins/leaves) — rendered as a centred pill,
+// not a normal message. Marked with sys:true so the client can style it.
+function sysChat(room, text) {
+  room.chat.push({ id: uid(), sys: true, text, ts: now() });
+  if (room.chat.length > CHAT_KEEP) room.chat = room.chat.slice(-CHAT_KEEP);
+}
 
 const connectedCount = room => [...room.players.values()].filter(p => p.connected).length;
 
@@ -477,6 +483,7 @@ wss.on("connection", (ws) => {
       rooms.set(room.code, room);
       roomCode = room.code;
       ws.send(JSON.stringify({ type: "joined", code: room.code, youId: pid }));
+      sysChat(room, `${name} joined the room`);
       broadcast(room);
       return;
     }
@@ -492,6 +499,7 @@ wss.on("connection", (ws) => {
       room.players.set(pid, { id: pid, name, ws, connected: true });
       roomCode = code;
       ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
+      sysChat(room, `${name} joined the room`);
       refreshAutoStart(room);
       broadcast(room);
       return;
@@ -503,7 +511,9 @@ wss.on("connection", (ws) => {
       if (!room || !room.players.has(msg.youId)) return sendErr(ws, "Couldn't rejoin — room gone.");
       pid = msg.youId; roomCode = code;
       const p = room.players.get(pid);
+      const wasOff = !p.connected;         // announce a comeback only after a real drop
       p.ws = ws; p.connected = true;
+      if (wasOff) sysChat(room, `${p.name} came back`);
       // The original creator reclaims host when they come back online — host only
       // migrated away because they dropped. (Only same-identity reconnects reach
       // here; someone who intentionally left cleared their session and can't.)
@@ -660,6 +670,7 @@ wss.on("connection", (ws) => {
     // broadcast() to skip them until they refresh.
     if (!p || p.ws !== ws) return;
     p.connected = false;
+    sysChat(room, `${p.name} left the room`);
 
     // If everyone gone, clean up after a grace period
     const anyConnected = [...room.players.values()].some(x => x.connected);

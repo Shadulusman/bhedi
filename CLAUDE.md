@@ -158,7 +158,8 @@ Client → server:
 Server → client:
 - `joined` `{code, youId}` — once on connect
 - `state` `{...}` — full sanitized snapshot, broadcast on every change. Always
-  carries `chat` (last 50 msgs, or `[]` when the host disabled chat) and, in the
+  carries `chat` (last 50 msgs, or `[]` when the host disabled chat; entries with
+  `sys:true` are join/leave notices rendered as centred pills, no `name`) and, in the
   lobby, `autoStartAt` + `autoStartPaused`. In play/vote the round carries `order[]` (with per-player
   `dead`/`votes` (live current-round count)/`connected`/`role`), `roundNo`, `yourAlive`.
   `role` is revealed ONLY for DEAD players (alive roles stay `null`) so the board can
