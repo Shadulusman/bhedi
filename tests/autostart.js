@@ -16,7 +16,7 @@ function client(name){
   ws.sendj=o=>{ if(ws.readyState===1) ws.send(JSON.stringify(o)); };
   return ws;
 }
-setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},15000);
+setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},20000);
 (async()=>{
   await wait(400);
   const A=client("A"); await wait(200); A.sendj({type:"create",name:"A"}); await wait(250);
@@ -30,6 +30,27 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},15000);
   ok("auto-started without host pressing start", A.state.status==="playing");
   ok("every player got a role on auto-start", cs.every(c=>c.state.round && c.state.round.yourRole));
   cs.forEach(c=>c.close()); await wait(200);
+
+  // ---- HOST PAUSES THE LOBBY COUNTDOWN ----
+  const D=client("D"); await wait(200); D.sendj({type:"create",name:"D"}); await wait(250);
+  const cs2=[D];
+  for(const nm of ["E","F"]){ const c=client(nm); await wait(120); c.sendj({type:"join",code:D.code,name:nm}); cs2.push(c); }
+  await wait(300);
+  ok("countdown running before pause", typeof D.state.autoStartAt==="number" && D.state.autoStartPaused===false);
+  D.sendj({type:"pauseTimer", paused:true}); await wait(200);
+  ok("pause clears the countdown deadline", D.state.autoStartAt===null && D.state.autoStartPaused===true);
+  // a non-host cannot pause/resume
+  cs2[1].sendj({type:"pauseTimer", paused:false}); await wait(200);
+  ok("non-host cannot resume", D.state.autoStartPaused===true);
+  // stays in lobby past LOBBY_SECONDS while paused
+  await wait(2600);
+  ok("paused countdown does NOT auto-start", D.state.status==="lobby");
+  D.sendj({type:"pauseTimer", paused:false}); await wait(200);
+  ok("resume re-arms the countdown", typeof D.state.autoStartAt==="number" && D.state.autoStartPaused===false);
+  await wait(2600);
+  ok("auto-starts after resume", D.state.status==="playing");
+  cs2.forEach(c=>c.close()); await wait(200);
+
   console.log("\n"+(fail.length?"FAILURES: "+fail.join("; "):"AUTO-START: ALL PASSED"));
   process.exit(fail.length?1:0);
 })();

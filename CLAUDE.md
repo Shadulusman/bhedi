@@ -122,9 +122,13 @@ Room state lives in an in-memory `Map`. Rooms are deleted 60s after the last
 player disconnects.
 
 **Lobby auto-start:** any lobby with 3+ connected players starts a
-`LOBBY_SECONDS` (60s) countdown (`refreshAutoStart` → `room.autoStartTimer` /
-`room.autoStartAt`). At zero it calls `startRound`; the host can start early;
-dropping below 3 cancels it. `startRound` always `cancelAutoStart`s.
+`LOBBY_SECONDS` (60s) countdown (`refreshAutoStart` → `armAutoStart` sets
+`room.autoStartTimer` / `room.autoStartAt`). At zero it calls `startRound`; the
+host can start early; dropping below 3 cancels it. `startRound` always
+`cancelAutoStart`s. The **host can pause/resume** the countdown (`pauseTimer`
+message): pausing stashes the remaining ms in `room.autoStartRemaining`, sets
+`room.autoStartPaused`, and cancels the timer (`refreshAutoStart` bails while
+paused); resuming re-arms from the stashed remaining, not a fresh 60s.
 
 **Public vs private rooms:** `create` takes `{public}`. Private (default) rooms
 are code-join only and hidden from `/rooms`. Public rooms ("Create a public
@@ -144,8 +148,9 @@ Client → server:
 | `clue` | current turn, alive only | `{words:[...]}` |
 | `vote` | alive players, voting phase | `{targetId}` — must be an alive player |
 | `chat` | anyone, if `settings.chat` on | `{text}` — lobby/playing/voting; trimmed to 160, ~350ms/msg rate limit |
-| `voice` | anyone, in-game | `{audio, mime}` — base64 push-to-talk clip (≤~300KB, ~8s), relayed to the rest of the room, NOT stored in state |
+| `voice` | anyone, lobby or in-game | `{audio, mime}` — base64 push-to-talk clip (≤~300KB, ~8s), relayed to the rest of the room, NOT stored in state |
 | `kick` | host | `{targetId}` — removes a player, drops them from a running game |
+| `pauseTimer` | host, lobby | `{paused}` — pause/resume the auto-start countdown (omit `paused` to toggle) |
 | `forceReveal` | host, voting | — (resolve this round's vote now) |
 | `again` | host, results | — |
 | `backToLobby` | host | — |
@@ -154,7 +159,7 @@ Server → client:
 - `joined` `{code, youId}` — once on connect
 - `state` `{...}` — full sanitized snapshot, broadcast on every change. Always
   carries `chat` (last 50 msgs, or `[]` when the host disabled chat) and, in the
-  lobby, `autoStartAt`. In play/vote the round carries `order[]` (with per-player
+  lobby, `autoStartAt` + `autoStartPaused`. In play/vote the round carries `order[]` (with per-player
   `dead`/`votes` (live current-round count)/`connected`), `roundNo`, `yourAlive`.
 - `voice` `{from, name, mime, audio}` — a relayed push-to-talk clip; pushed once
   to everyone except the sender (never part of `state`, so it isn't re-broadcast).
@@ -223,8 +228,9 @@ win-condition mechanic. The play screen (`playFeedHtml`) shows a per-player stat
 row (their clue / "…" typing / "Up next" / "Killed"); the vote screen shows each
 player's clue, a **live current-round vote badge** (`order[].votes`, updates in
 real time as people vote), and Vote/Voted buttons; results shows a coloured
-win/lose card + the reveal (role + Dead tags). An in-game push-to-talk mic FAB
-(`#pttBtn`, bottom-right, hold to record) sends a short voice clip to the room.
+win/lose card + the reveal (role + Dead tags). A push-to-talk mic FAB (`#pttBtn`,
+bottom-right, hold to record; shown in the lobby and all through the game via
+`refreshVoiceBtn`) sends a short voice clip to the room.
 
 Each vote phase **auto-resolves after `VOTE_SECONDS` (30s, overridable via env
 var for tests)** even if not everyone voted — `scheduleVoteTimeout`. The timer

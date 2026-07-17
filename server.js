@@ -70,6 +70,7 @@ function makeRoom(hostId) {
     chat: [],            // {id,name,text,ts} — last CHAT_KEEP kept
     autoStartAt: null,   // ms timestamp the lobby auto-start fires, or null
     autoStartTimer: null,
+    autoStartPaused: false, // host paused the lobby countdown
   };
 }
 
@@ -91,6 +92,7 @@ function sanitize(room, pid) {
     chat: room.settings.chat ? room.chat.slice(-CHAT_KEEP).map(c => ({ id: c.id, name: c.name, text: c.text })) : [],
     // Lobby auto-start countdown deadline (ms) so clients can render "Starts in 0:58".
     autoStartAt: room.status === "lobby" ? room.autoStartAt : null,
+    autoStartPaused: room.status === "lobby" ? room.autoStartPaused : false,
   };
   if (room.status === "playing" || room.status === "voting") {
     const r = room.round;
@@ -244,21 +246,23 @@ function cancelAutoStart(room) {
   if (room.autoStartTimer) { clearTimeout(room.autoStartTimer); room.autoStartTimer = null; }
   room.autoStartAt = null;
 }
+function armAutoStart(room, ms) {
+  cancelAutoStart(room);
+  room.autoStartAt = now() + ms;
+  room.autoStartTimer = setTimeout(() => {
+    room.autoStartTimer = null; room.autoStartAt = null;
+    if (room.status === "lobby" && connectedCount(room) >= 3) {
+      startRound(room);
+      broadcast(room);
+    }
+  }, ms);
+}
 function refreshAutoStart(room) {
   if (room.status !== "lobby") { cancelAutoStart(room); return; }
+  if (room.autoStartPaused) { cancelAutoStart(room); return; } // host froze the countdown
   const enough = connectedCount(room) >= 3;
-  if (enough && !room.autoStartTimer) {
-    room.autoStartAt = now() + LOBBY_SECONDS * 1000;
-    room.autoStartTimer = setTimeout(() => {
-      room.autoStartTimer = null; room.autoStartAt = null;
-      if (room.status === "lobby" && connectedCount(room) >= 3) {
-        startRound(room);
-        broadcast(room);
-      }
-    }, LOBBY_SECONDS * 1000);
-  } else if (!enough && room.autoStartTimer) {
-    cancelAutoStart(room);
-  }
+  if (enough && !room.autoStartTimer) armAutoStart(room, LOBBY_SECONDS * 1000);
+  else if (!enough && room.autoStartTimer) cancelAutoStart(room);
 }
 
 // Voting auto-resolves after VOTE_SECONDS even if not everyone has voted, so a
@@ -523,6 +527,23 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    // Host pauses/resumes the lobby auto-start countdown. Pausing freezes the
+    // remaining time; resuming continues from where it left off (not a fresh 60s).
+    if (t === "pauseTimer" && room.hostId === pid && room.status === "lobby") {
+      const wantPause = typeof msg.paused === "boolean" ? msg.paused : !room.autoStartPaused;
+      if (wantPause && !room.autoStartPaused) {
+        room.autoStartRemaining = room.autoStartAt ? Math.max(0, room.autoStartAt - now()) : null;
+        room.autoStartPaused = true;
+        cancelAutoStart(room);
+      } else if (!wantPause && room.autoStartPaused) {
+        room.autoStartPaused = false;
+        if (connectedCount(room) >= 3) armAutoStart(room, room.autoStartRemaining != null ? room.autoStartRemaining : LOBBY_SECONDS * 1000);
+        room.autoStartRemaining = null;
+      }
+      broadcast(room);
+      return;
+    }
+
     if (t === "chat") {
       if (!room.settings.chat) return;                     // host disabled chat
       if (room.status !== "lobby" && room.status !== "playing" && room.status !== "voting") return;
@@ -542,7 +563,7 @@ wss.on("connection", (ws) => {
     if (t === "voice") {
       // push-to-talk walkie-talkie: relay a short recorded clip to everyone else in
       // the room. Not stored in state (broadcast() would re-send it) — pushed once.
-      if (room.status === "lobby") return;               // only meaningful in-game
+      // Works in the lobby and in-game.
       const p = room.players.get(pid);
       if (!p) return;
       const nowMs = now();
