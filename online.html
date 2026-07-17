@@ -409,16 +409,17 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .toast.show{transform:translateX(-50%) translateY(0);}
 
 /* ---- push-to-talk (hold to speak) ---- */
-.ptt{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(var(--safe-b) + 112px);z-index:55;
+.ptt{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(var(--safe-b) + 20px);z-index:55;
   display:flex;flex-direction:column;align-items:center;gap:2px;width:64px;height:64px;justify-content:center;
   border:none;border-radius:50%;background:var(--gold);color:#fff;cursor:pointer;
   box-shadow:0 12px 26px -8px rgba(225,29,42,.55);touch-action:none;-webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
   transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
 .ptt .ptt-lbl{font-family:var(--ff-body);font-weight:700;font-size:8px;letter-spacing:.02em;line-height:1;opacity:.9;}
 .ptt:active,.ptt.rec{transform:scale(1.12);background:#b3111c;box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}
 .ptt.rec{animation:pttPulse 1s ease-in-out infinite;}
 @keyframes pttPulse{0%,100%{box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}50%{box-shadow:0 0 0 15px rgba(225,29,42,.05),0 12px 26px -8px rgba(225,29,42,.6);}}
-.ptt-speaking{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(var(--safe-b) + 184px);z-index:55;
+.ptt-speaking{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(var(--safe-b) + 92px);z-index:55;
   display:flex;align-items:center;gap:7px;background:#17181F;border:1px solid rgba(255,255,255,.12);color:#fff;
   font-size:12px;font-weight:600;padding:7px 12px;border-radius:100px;box-shadow:0 10px 24px -12px rgba(20,24,40,.6);}
 .ptts-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pttPulse2 .8s ease-in-out infinite;}
@@ -476,7 +477,10 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .pf-row:first-child{border-radius:var(--r-md) var(--r-md) 0 0;}
 .pf-row:last-child{border-radius:0 0 var(--r-md) var(--r-md);border-bottom:1px solid var(--line-soft);}
 .pf-row.turn-now{background:linear-gradient(180deg,rgba(30,127,224,.08),transparent);border-color:rgba(30,127,224,.4);}
-.pf-row.dead{opacity:.5;}
+.pf-row.dead{opacity:.72;background:repeating-linear-gradient(135deg,var(--surface),var(--surface) 9px,rgba(20,24,40,.03) 9px,rgba(20,24,40,.03) 18px);}
+.pf-row.dead .pf-nm,.vrow.dead .vr-nm{text-decoration:line-through;text-decoration-color:var(--muted-2);text-decoration-thickness:2px;color:var(--muted-2);}
+.pf-row.dead .pf-av,.vrow.dead .vr-av{filter:grayscale(1);}
+.dead-tag{flex:none;display:inline-flex;align-items:center;gap:4px;font-family:var(--ff-disp);font-weight:800;font-size:11px;letter-spacing:.06em;color:#fff;background:#4b5563;padding:4px 10px;border-radius:100px;}
 .pf-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:15px;color:#fff;}
 .pf-b{flex:1;min-width:0;}
 .pf-nm{font-family:var(--ff-disp);font-weight:700;font-size:16px;color:var(--cream);display:flex;align-items:center;gap:7px;}
@@ -499,7 +503,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .vrow:first-child{border-radius:var(--r-md) var(--r-md) 0 0;}
 .vrow:last-child{border-radius:0 0 var(--r-md) var(--r-md);border-bottom:1px solid var(--line-soft);}
 .vrow.picked{background:linear-gradient(180deg,rgba(30,127,224,.08),transparent);border-color:rgba(30,127,224,.5);}
-.vrow.dead{opacity:.5;}
+.vrow.dead{opacity:.72;background:repeating-linear-gradient(135deg,var(--surface),var(--surface) 9px,rgba(20,24,40,.03) 9px,rgba(20,24,40,.03) 18px);}
 .vr-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:16px;color:#fff;}
 .vr-b{flex:1;min-width:0;}
 .vr-nm{font-family:var(--ff-disp);font-weight:700;font-size:15px;color:var(--muted);display:flex;align-items:center;gap:7px;}
@@ -1046,13 +1050,32 @@ function playVoice(m){
 }
 (function wirePTT(){
   const btn = $("#pttBtn");
-  const down = e => { e.preventDefault(); pttStart(); };
-  const up = e => { e.preventDefault(); pttStop(); };
+  let activeId = null;
+  const down = e => {
+    if (activeId !== null) return;          // ignore a second finger
+    activeId = e.pointerId;
+    e.preventDefault();
+    // capture the pointer so sliding a finger OFF the button keeps recording —
+    // this is what fixed the "voice keeps cutting out" bug (pointerleave used to
+    // stop it the moment your finger drifted a pixel).
+    try { btn.setPointerCapture(e.pointerId); } catch(_){}
+    pttStart();
+  };
+  const up = e => {
+    if (activeId === null) return;
+    if (e.pointerId != null && e.pointerId !== activeId) return; // only the finger that started
+    activeId = null;
+    e.preventDefault();
+    try { btn.releasePointerCapture(e.pointerId); } catch(_){}
+    pttStop();
+  };
   btn.addEventListener("pointerdown", down);
   btn.addEventListener("pointerup", up);
   btn.addEventListener("pointercancel", up);
-  btn.addEventListener("pointerleave", up);
-  window.addEventListener("blur", up);
+  // long-press on mobile pops a context menu / text-selection — kill it
+  btn.addEventListener("contextmenu", e => e.preventDefault());
+  // if the app is backgrounded mid-hold, end the clip cleanly
+  document.addEventListener("visibilitychange", () => { if (document.hidden && activeId !== null) { activeId = null; pttStop(); } });
 })();
 function refreshVoiceBtn(){
   // push-to-talk is available in the lobby and all the way through the game
@@ -1435,11 +1458,13 @@ function playFeedHtml(r, youId){
     else if (p.id === r.turnPlayerId) st = `<span class="pf-typing"><i></i><i></i><i></i></span>`;
     else if (p.id === nextId) st = `<span class="pf-muted">Up next</span>`;
     else st = `<span class="pf-muted">…</span>`;
-    const dot = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
+    const right = p.dead
+      ? `<span class="dead-tag">☠ Out</span>`
+      : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
     return `<div class="pf-row${p.id===r.turnPlayerId?' turn-now':''}${p.dead?' dead':''}">
       <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
       <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${p.id===youId?' <span class="pf-you">You</span>':''}</div>${st}${clueHistoryHtml(r, p.id)}</div>
-      ${dot}
+      ${right}
     </div>`;
   }).join("");
 }
@@ -1544,11 +1569,13 @@ function renderVote(){
     const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
     const el = document.createElement("div");
     el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"");
-    const dot = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
+    const right = p.dead
+      ? `<span class="dead-tag">☠ Out</span>`
+      : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>${badge}${btn}`;
     el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
       <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</div>
         <div class="vr-clue">${escapeHtml(clueTxt)}</div>${clueHistoryHtml(r, p.id)}</div>
-      ${dot}${badge}${btn}`;
+      ${right}`;
     g.appendChild(el);
   });
   $("#voteProg").textContent = iAmDead ? "You're out — watching the vote" : `${r.votesIn} of ${r.totalVoters} voted`;
