@@ -854,7 +854,7 @@ const S = {
   connected:false, retry:0, intentionalClose:false,
   voteTimerHandle:null, openRoomsHandle:null, roomsTick:null, lobbyTick:null,
   rooms:[], chatOpen:false, chatSeen:0,
-  pendingIntent:null, wakeTimer:null, createPublic:false,
+  pendingIntent:null, wakeTimer:null, createPublic:false, rejoinPending:false,
 };
 
 function go(id){
@@ -882,9 +882,21 @@ function connBanner(show, ok, text){
 // up, the reconnect still completes the original action instead of dropping it.
 function replayIntent(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
-  if (sess && sess.code) { send({ type:"rejoin", code:sess.code, youId:sess.youId }); return; }
+  if (sess && sess.code) { S.rejoinPending = true; send({ type:"rejoin", code:sess.code, youId:sess.youId }); return; }
   const p = S.pendingIntent;
   if (p) send(p.type === "create" ? { type:"create", name:p.name, public:p.public } : { type:"join", code:p.code, name:p.name });
+}
+// The game we were in is gone (server restarted / everyone left). Drop the stale
+// session so create/join works again instead of looping on a dead rejoin.
+function bailToEntry(msg){
+  S.rejoinPending = false;
+  localStorage.removeItem("nocap_session");
+  S.intentionalClose = true; if (S.ws) { try { S.ws.close(); } catch(e){} }
+  S.pendingIntent = null; S.state = null; S.code = ""; S.youId = null; S.connected = false;
+  clearTimeout(S.wakeTimer); connBanner(false);
+  $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
+  startRoomsBrowser(); go("entry");
+  if (msg) toast(msg);
 }
 
 function connect(then){
@@ -902,13 +914,17 @@ function connect(then){
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.type === "joined") { S.code = m.code; S.youId = m.youId;
-      S.pendingIntent = null; clearTimeout(S.wakeTimer);
+      S.pendingIntent = null; S.rejoinPending = false; clearTimeout(S.wakeTimer);
       $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
       localStorage.setItem("nocap_session", JSON.stringify({ code:m.code, youId:m.youId })); return; }
-    if (m.type === "kicked") { S.intentionalClose = true; localStorage.removeItem("nocap_session");
-      if (S.ws) S.ws.close(); S.state=null; S.code=""; S.youId=null; startRoomsBrowser(); go("entry");
-      toast("The host removed you from the room"); return; }
-    if (m.type === "error") { toast(m.message); return; }
+    if (m.type === "kicked") { bailToEntry("The host removed you from the room"); return; }
+    if (m.type === "error") {
+      // a failed rejoin (stale session -> "room gone") must not loop forever.
+      // rejoinPending is only true between sending a rejoin and getting "joined",
+      // so an error here means the rejoin itself failed — bail to a clean entry.
+      if (S.rejoinPending) { bailToEntry("That game ended — start a new one"); return; }
+      toast(m.message); return;
+    }
     if (m.type === "state") { S.prev = S.state; S.state = m; render(); }
   };
   ws.onclose = () => {
@@ -1003,6 +1019,9 @@ $("#goBtn").addEventListener("click", () => {
   if (S.mode === "join" && code.length !== 4) { toast("Room codes are 4 letters"); return; }
   S.pendingIntent = S.mode === "create" ? { type:"create", name, public:S.createPublic } : { type:"join", code, name };
   S.createPublic = false;   // reset — next plain "Make a room" is private again
+  // fresh action from the entry screen — drop any old session so we don't get
+  // hijacked into rejoining a dead room instead of creating/joining.
+  localStorage.removeItem("nocap_session"); S.rejoinPending = false;
   $("#goBtn").disabled = true; $("#entryNote").textContent = "Connecting…";
   connect(replayIntent);
   clearTimeout(S.wakeTimer);
@@ -1418,7 +1437,7 @@ function renderResults(){
 /* ---------- resume session / open a shared room link ---------- */
 (function resume(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
-  if (sess && sess.code) { connect(() => send({ type:"rejoin", code: sess.code, youId: sess.youId })); return; }
+  if (sess && sess.code) { connect(() => { S.rejoinPending = true; send({ type:"rejoin", code: sess.code, youId: sess.youId }); }); return; }
   startRoomsBrowser(); // no game to resume — browse public rooms
 
   // Shared invite link: online.html?room=ABCD → jump straight to that room.
