@@ -160,7 +160,9 @@ Server → client:
 - `state` `{...}` — full sanitized snapshot, broadcast on every change. Always
   carries `chat` (last 50 msgs, or `[]` when the host disabled chat) and, in the
   lobby, `autoStartAt` + `autoStartPaused`. In play/vote the round carries `order[]` (with per-player
-  `dead`/`votes` (live current-round count)/`connected`), `roundNo`, `yourAlive`.
+  `dead`/`votes` (live current-round count)/`connected`/`role`), `roundNo`, `yourAlive`.
+  `role` is revealed ONLY for DEAD players (alive roles stay `null`) so the board can
+  show "Dead · Imposter/Civilian"; the client also sinks dead players to the bottom.
 - `voice` `{from, name, mime, audio}` — a relayed push-to-talk clip; pushed once
   to everyone except the sender (never part of `state`, so it isn't re-broadcast).
   Client autoplays it (`playVoice`) and shows a "<name> is talking" pill.
@@ -228,9 +230,13 @@ win-condition mechanic. The play screen (`playFeedHtml`) shows a per-player stat
 row (their clue / "…" typing / "Up next" / "Killed"); the vote screen shows each
 player's clue, a **live current-round vote badge** (`order[].votes`, updates in
 real time as people vote), and Vote/Voted buttons; results shows a coloured
-win/lose card + the reveal (role + Dead tags). A push-to-talk mic FAB (`#pttBtn`,
-bottom-right, hold to record; shown in the lobby and all through the game via
-`refreshVoiceBtn`) sends a short voice clip to the room.
+win/lose card + the reveal (role + Dead tags). Chat is a docked bar pinned at the
+bottom (`#chatBar`, shows unread badge + last-message preview) that opens the chat
+sheet; when it's visible `body.has-chatbar` reserves space via `--chatbar-h` so
+screens shrink above it. A push-to-talk mic FAB (`#pttBtn`) is centred just above
+the chat bar; `refreshVoiceBtn` lifts it above whatever footer CTA is showing
+(`--ptt-lift`) and hides it while the chat sheet is open. Shown in the lobby and
+all through the game; sends a short voice clip to the room.
 
 Each vote phase **auto-resolves after `VOTE_SECONDS` (30s, overridable via env
 var for tests)** even if not everyone voted — `scheduleVoteTimeout`. The timer

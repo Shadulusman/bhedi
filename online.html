@@ -36,7 +36,9 @@
   --ff-mono:'Share Tech Mono', ui-monospace, monospace;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
+  --chatbar-h:0px;
 }
+body.has-chatbar{--chatbar-h:calc(60px + var(--safe-b));}   /* reserve room for the docked chat bar */
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;height:100%;}
 body{
@@ -56,7 +58,7 @@ body{
   font-weight:500;
 }
 #app{position:relative; height:100dvh; width:100%; max-width:560px; margin:0 auto; overflow:hidden;}
-.screen{position:absolute; inset:0; display:flex; flex-direction:column; opacity:0; transform:translateY(14px) scale(.995); pointer-events:none; transition:opacity .34s cubic-bezier(.2,.7,.2,1), transform .34s cubic-bezier(.2,.7,.2,1);}
+.screen{position:absolute; top:0; left:0; right:0; bottom:var(--chatbar-h); display:flex; flex-direction:column; opacity:0; transform:translateY(14px) scale(.995); pointer-events:none; transition:opacity .34s cubic-bezier(.2,.7,.2,1), transform .34s cubic-bezier(.2,.7,.2,1);}
 .screen.active{opacity:1; transform:none; pointer-events:auto;}
 .scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 18px 8px;}
 .scroll::-webkit-scrollbar{width:0;}
@@ -408,22 +410,37 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
   padding:12px 18px;border-radius:100px;transition:.3s cubic-bezier(.2,1.2,.4,1);box-shadow:0 14px 30px -12px rgba(20,24,40,.5);max-width:88%;text-align:center;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 
-/* ---- push-to-talk (hold to speak) ---- */
-.ptt{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(var(--safe-b) + 20px);z-index:55;
+/* ---- push-to-talk (hold to speak) — centred, sits above the docked chat bar ---- */
+.ptt{position:fixed;left:50%;bottom:calc(var(--chatbar-h, 0px) + var(--safe-b) + var(--ptt-lift, 0px) + 14px);z-index:55;
   display:flex;flex-direction:column;align-items:center;gap:2px;width:64px;height:64px;justify-content:center;
   border:none;border-radius:50%;background:var(--gold);color:#fff;cursor:pointer;
   box-shadow:0 12px 26px -8px rgba(225,29,42,.55);touch-action:none;-webkit-user-select:none;user-select:none;
-  -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;transform:translateX(-50%);
   transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
 .ptt .ptt-lbl{font-family:var(--ff-body);font-weight:700;font-size:8px;letter-spacing:.02em;line-height:1;opacity:.9;}
-.ptt:active,.ptt.rec{transform:scale(1.12);background:#b3111c;box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}
+.ptt:active,.ptt.rec{transform:translateX(-50%) scale(1.12);background:#b3111c;box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}
 .ptt.rec{animation:pttPulse 1s ease-in-out infinite;}
 @keyframes pttPulse{0%,100%{box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}50%{box-shadow:0 0 0 15px rgba(225,29,42,.05),0 12px 26px -8px rgba(225,29,42,.6);}}
-.ptt-speaking{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(var(--safe-b) + 92px);z-index:55;
+.ptt-speaking{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--chatbar-h, 0px) + var(--safe-b) + var(--ptt-lift, 0px) + 88px);z-index:55;
   display:flex;align-items:center;gap:7px;background:#17181F;border:1px solid rgba(255,255,255,.12);color:#fff;
   font-size:12px;font-weight:600;padding:7px 12px;border-radius:100px;box-shadow:0 10px 24px -12px rgba(20,24,40,.6);}
 .ptts-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pttPulse2 .8s ease-in-out infinite;}
 @keyframes pttPulse2{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+/* ---- docked chat bar (bottom, tap to open the chat sheet) ---- */
+.chatbar{position:absolute;left:0;right:0;bottom:0;height:var(--chatbar-h);z-index:40;
+  display:flex;align-items:center;gap:12px;padding:8px 14px calc(var(--safe-b) + 8px);
+  background:var(--surface);border-top:1px solid var(--line-soft);box-shadow:0 -8px 24px -18px rgba(20,24,40,.4);
+  cursor:pointer;text-align:left;width:100%;font:inherit;}
+.chatbar .cb-ico{position:relative;flex:none;width:42px;height:42px;border-radius:12px;background:rgba(30,127,224,.12);display:grid;place-items:center;color:var(--blue);}
+.chatbar .cb-ico svg{width:22px;height:22px;}
+.cb-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:100px;background:var(--gold);color:#fff;font-family:var(--ff-disp);font-weight:800;font-size:11px;display:grid;place-items:center;border:2px solid var(--surface);}
+.chatbar .cb-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.chatbar .cb-txt b{font-family:var(--ff-disp);font-weight:800;font-size:15px;color:var(--cream);}
+.cb-prev{font-size:13px;color:var(--muted-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chatbar .cb-chev{flex:none;width:38px;height:38px;border-radius:10px;background:rgba(20,24,40,.05);display:grid;place-items:center;color:var(--muted-2);}
+.chatbar .cb-chev svg{width:20px;height:20px;}
+body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe area */
 
 /* ---- lobby auto-start banner ---- */
 .auto-banner{display:flex;align-items:center;justify-content:center;gap:9px;margin:14px 0 2px;padding:12px;border-radius:var(--r-md);
@@ -481,6 +498,11 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .pf-row.dead .pf-nm,.vrow.dead .vr-nm{text-decoration:line-through;text-decoration-color:var(--muted-2);text-decoration-thickness:2px;color:var(--muted-2);}
 .pf-row.dead .pf-av,.vrow.dead .vr-av{filter:grayscale(1);}
 .dead-tag{flex:none;display:inline-flex;align-items:center;gap:4px;font-family:var(--ff-disp);font-weight:800;font-size:11px;letter-spacing:.06em;color:#fff;background:#4b5563;padding:4px 10px;border-radius:100px;}
+/* reference-style status pills next to a player's name */
+.rtag{flex:none;display:inline-flex;align-items:center;font-family:var(--ff-body);font-weight:800;font-size:11px;letter-spacing:.01em;padding:2px 9px;border-radius:100px;}
+.rtag.dead{background:rgba(225,29,42,.13);color:var(--gold-ink);}
+.rtag.civ{background:rgba(18,160,92,.16);color:#0b7a44;}
+.rtag.imp{background:var(--gold);color:#fff;}
 .pf-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:15px;color:#fff;}
 .pf-b{flex:1;min-width:0;}
 .pf-nm{font-family:var(--ff-disp);font-weight:700;font-size:16px;color:var(--cream);display:flex;align-items:center;gap:7px;}
@@ -830,6 +852,16 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
     </div>
   </section>
 
+  <!-- docked chat bar (bottom) — opens the chat sheet -->
+  <button class="chatbar hidden" id="chatBar">
+    <span class="cb-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-11.9 7.8L3 21l1.8-5.3A8.5 8.5 0 1 1 21 11.5Z"/></svg>
+      <span class="cb-badge hidden" id="chatBarBadge">0</span>
+    </span>
+    <span class="cb-txt"><b>Chat</b><span class="cb-prev" id="chatBarPrev">Tap to chat</span></span>
+    <span class="cb-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
+  </button>
+
 </div>
 
 <div class="conn" id="conn">Reconnecting…</div>
@@ -943,6 +975,7 @@ function bailToEntry(msg){
   S.pendingIntent = null; S.state = null; S.code = ""; S.youId = null; S.connected = false;
   clearTimeout(S.wakeTimer); connBanner(false);
   $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
+  $("#chatBar").classList.add("hidden"); document.body.classList.remove("has-chatbar");
   startRoomsBrowser(); go("entry");
   if (msg) toast(msg);
 }
@@ -1079,9 +1112,17 @@ function playVoice(m){
 })();
 function refreshVoiceBtn(){
   // push-to-talk is available in the lobby and all the way through the game
-  const show = S.state && (S.state.status === "lobby" || S.state.status === "playing" || S.state.status === "voting" || S.state.status === "results");
+  // (but not while the chat sheet is open — it would float over it)
+  const show = !S.chatOpen && S.state && (S.state.status === "lobby" || S.state.status === "playing" || S.state.status === "voting" || S.state.status === "results");
   $("#pttBtn").classList.toggle("hidden", !show);
   if (!show) { pttStop(); $("#pttSpeaking").classList.add("hidden"); }
+  // float the centred mic ABOVE whatever footer CTA the active screen is showing
+  // (Start game / Send my clue / End vote) so it never covers the button
+  let lift = 0;
+  const active = document.querySelector(".screen.active");
+  const foot = active && active.querySelector(".footer");
+  if (foot && !foot.classList.contains("hidden") && foot.offsetParent !== null) lift = foot.offsetHeight;
+  document.body.style.setProperty("--ptt-lift", lift + "px");
 }
 
 /* ---------- entry ---------- */
@@ -1210,6 +1251,7 @@ function leave(){
   if (S.ws) S.ws.close();
   clearInterval(S.voteTimerHandle); clearInterval(S.lobbyTick); clearInterval(S.turnTimerHandle);
   closeChat();
+  $("#chatBar").classList.add("hidden"); document.body.classList.remove("has-chatbar");
   S.state=null; S.code=""; S.youId=null; S.roleSeen=false; S.chatSeen=0;
   startRoomsBrowser(); // back at entry — resume the public-room list
   go("entry");
@@ -1226,12 +1268,16 @@ function openChat(){
   if (!(S.state && S.state.settings && S.state.settings.chat)) return;
   S.chatOpen = true;
   $("#chatScrim").classList.add("open"); $("#chatSheet").classList.add("open");
+  $("#chatBar").classList.add("hidden"); document.body.classList.remove("has-chatbar"); // hide docked bar while open
+  refreshVoiceBtn();   // hide the floating mic while the sheet is open
   renderChat();
   setTimeout(()=>$("#chatIn").focus(), 250);
 }
 function closeChat(){
   S.chatOpen = false;
   $("#chatScrim").classList.remove("open"); $("#chatSheet").classList.remove("open");
+  refreshChatButtons();   // bring the docked bar back
+  refreshVoiceBtn();      // and the floating mic
 }
 function sendChat(){
   const inp = $("#chatIn"); const text = inp.value.trim();
@@ -1241,6 +1287,7 @@ function sendChat(){
 $("#lobbyChatBtn").addEventListener("click", openChat);
 $("#playChatBtn").addEventListener("click", openChat);
 $("#voteChatBtn").addEventListener("click", openChat);
+$("#chatBar").addEventListener("click", () => { buzz(6); openChat(); });
 $("#chatClose").addEventListener("click", closeChat);
 $("#chatScrim").addEventListener("click", closeChat);
 $("#chatSend").addEventListener("click", sendChat);
@@ -1260,18 +1307,25 @@ function renderChat(){
   if (S.chatOpen) S.chatSeen = msgs.length;
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-// Show/hide the chat buttons + unread badge for whatever screen is up.
+// Drive the docked bottom chat bar (last message preview + unread badge). The old
+// topbar chat icons are retired in favour of this bar.
 function refreshChatButtons(){
   const enabled = !!(S.state && S.state.settings && S.state.settings.chat);
+  const status = S.state && S.state.status;
+  const inChatScreen = status === "lobby" || status === "playing" || status === "voting";
   const total = (S.state && S.state.chat) ? S.state.chat.length : 0;
   const unread = Math.max(0, total - S.chatSeen);
-  ["lobby","play","vote"].forEach(scr => {
-    const btn = $("#"+scr+"ChatBtn"), badge = $("#"+scr+"ChatBadge");
-    if (!btn) return;
-    btn.classList.toggle("hidden", !enabled);
+  ["lobby","play","vote"].forEach(scr => { const b=$("#"+scr+"ChatBtn"); if(b) b.classList.add("hidden"); });
+  const show = enabled && inChatScreen && !S.chatOpen;
+  $("#chatBar").classList.toggle("hidden", !show);
+  document.body.classList.toggle("has-chatbar", show);
+  if (show){
+    const badge = $("#chatBarBadge");
     badge.textContent = unread > 9 ? "9+" : unread;
     badge.classList.toggle("hidden", unread === 0);
-  });
+    const last = total ? S.state.chat[total-1] : null;
+    $("#chatBarPrev").textContent = last ? `${last.name === S.name ? "You" : last.name}: ${last.text}` : "Tap to chat";
+  }
   if (!enabled && S.chatOpen) closeChat();
 }
 
@@ -1342,7 +1396,6 @@ function render(){
   const nowChat = s.chat ? s.chat.length : 0;
   if (nowChat > prevChat && !S.chatOpen) sfx.clue();
   refreshChatButtons();
-  refreshVoiceBtn();
   if (S.chatOpen) renderChat();
 
   if (s.status === "lobby") {
@@ -1367,6 +1420,8 @@ function render(){
   }
   else if (s.status === "voting") { renderVote(); go("ovote"); }
   else if (s.status === "results") { renderResults(); go("oresults"); }
+
+  refreshVoiceBtn();   // after the screen + its footer are set, so the mic lifts correctly
 }
 
 function renderLobby(){
@@ -1450,7 +1505,11 @@ function playFeedHtml(r, youId){
   for (let k = r.turnIndex + 1; k < r.order.length; k++){
     const q = r.order[k]; if (q && !q.dead && !q.gone && q.connected) { nextId = q.id; break; }
   }
-  return r.order.map((p) => {
+  // alive players stay in turn order; the dead sink to the bottom (like the ref)
+  const rows = r.order.map((p,i) => ({ p, i })).sort((a,b) =>
+    (a.p.dead?1:0) - (b.p.dead?1:0) || a.i - b.i
+  );
+  return rows.map(({p}) => {
     const clue = r.clues.find(c => c.playerId === p.id && c.roundNo === r.roundNo);
     let st;
     if (p.dead) st = `<span class="pf-killed">Killed</span>`;
@@ -1458,12 +1517,14 @@ function playFeedHtml(r, youId){
     else if (p.id === r.turnPlayerId) st = `<span class="pf-typing"><i></i><i></i><i></i></span>`;
     else if (p.id === nextId) st = `<span class="pf-muted">Up next</span>`;
     else st = `<span class="pf-muted">…</span>`;
-    const right = p.dead
-      ? `<span class="dead-tag">☠ Out</span>`
-      : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
+    const you = p.id===youId ? ' <span class="pf-you">You</span>' : '';
+    const deadTags = p.dead
+      ? ` <span class="rtag dead">Dead</span>${p.role ? ` <span class="rtag ${p.role==='imposter'?'imp':'civ'}">${p.role==='imposter'?'Imposter':'Civilian'}</span>` : ''}`
+      : '';
+    const right = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
     return `<div class="pf-row${p.id===r.turnPlayerId?' turn-now':''}${p.dead?' dead':''}">
       <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
-      <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${p.id===youId?' <span class="pf-you">You</span>':''}</div>${st}${clueHistoryHtml(r, p.id)}</div>
+      <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${you}${deadTags}</div>${st}${clueHistoryHtml(r, p.id)}</div>
       ${right}
     </div>`;
   }).join("");
@@ -1547,6 +1608,7 @@ function renderPlay(){
   } else {
     foot.classList.add("hidden");
   }
+  refreshVoiceBtn();   // footer visibility just changed — reposition the mic above it
 }
 
 function renderVote(){
@@ -1558,7 +1620,10 @@ function renderVote(){
   $("#voteSub").innerHTML = `The <b>most-voted</b> player is out this round. A tie means nobody goes out.`;
 
   const g = $("#oVoteGrid"); g.innerHTML = "";
-  r.order.forEach((p) => {
+  const rows = r.order.map((p,i) => ({ p, i })).sort((a,b) =>
+    (a.p.dead?1:0) - (b.p.dead?1:0) || a.i - b.i         // dead sink to the bottom
+  );
+  rows.forEach(({p}) => {
     const clue = r.clues.find(c => c.playerId === p.id && c.roundNo === r.roundNo);
     const clueTxt = p.dead ? "Killed" : (clue ? clue.words[0] : "No clue");
     const you = p.id === s.youId;
@@ -1569,11 +1634,12 @@ function renderVote(){
     const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
     const el = document.createElement("div");
     el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"");
-    const right = p.dead
-      ? `<span class="dead-tag">☠ Out</span>`
-      : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>${badge}${btn}`;
+    const deadTags = p.dead
+      ? ` <span class="rtag dead">Dead</span>${p.role ? ` <span class="rtag ${p.role==='imposter'?'imp':'civ'}">${p.role==='imposter'?'Imposter':'Civilian'}</span>` : ''}`
+      : '';
+    const right = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>${badge}${btn}`;
     el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
-      <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</div>
+      <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}${deadTags}</div>
         <div class="vr-clue">${escapeHtml(clueTxt)}</div>${clueHistoryHtml(r, p.id)}</div>
       ${right}`;
     g.appendChild(el);

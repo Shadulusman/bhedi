@@ -108,13 +108,16 @@ function sanitize(room, pid) {
       roundNo: r.roundNo,
       imposters: r.imposterIds.size,
       // roster in turn order — each player's alive/dead + connection + LIVE votes this round.
-      // NOTE: never leak who the imposter is here.
+      // NOTE: never leak an ALIVE player's role. A DEAD player's role IS revealed
+      // (they're out of the game) so the board can show "Dead · Imposter/Civilian".
       order: r.order.map(id => {
         const p = room.players.get(id);
+        const isDead = r.dead.has(id);
         return {
           id, name: p ? p.name : "?",
           connected: p ? p.connected : false,
-          dead: r.dead.has(id),
+          dead: isDead,
+          role: isDead ? (r.imposterIds.has(id) ? "imposter" : "civilian") : null, // only for the dead
           votes: liveVotes.get(id) || 0,          // LIVE votes this round (updates as people vote)
           gone: !p,                               // kicked / left entirely
         };
