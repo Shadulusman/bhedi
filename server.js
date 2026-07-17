@@ -101,6 +101,7 @@ function sanitize(room, pid) {
       phase: room.status,                         // "playing" | "voting"
       turnPlayerId: room.status === "playing" ? turnId : null,
       turnName: room.status === "playing" && room.players.get(turnId) ? room.players.get(turnId).name : null,
+      turnDeadline: room.status === "playing" ? (r.turnDeadline || null) : null,  // ms — per-turn 40s clock
       roundNo: r.roundNo,
       imposters: r.imposterIds.size,
       threshold: voteThreshold(room),             // votes needed to eliminate someone
@@ -156,9 +157,15 @@ function startRound(room) {
   const hintWords = decoys.slice(0, 3);
 
   const ids = [...room.players.keys()];
-  const shuffledForImposter = shuffle(ids);
   const impCount = Math.min(room.settings.imposters, Math.max(1, ids.length - 2));
-  const imposterIds = new Set(shuffledForImposter.slice(0, impCount));
+  // Random, but avoid making the same player(s) the imposter two games running —
+  // pick from those who WEREN'T imposter last game first, then fall back if needed.
+  // (Fixes the "same person is always the imposter" feeling; still uniform-ish.)
+  const last = room.lastImposters || new Set();
+  const fresh = shuffle(ids.filter(id => !last.has(id)));
+  const repeats = shuffle(ids.filter(id => last.has(id)));
+  const imposterIds = new Set([...fresh, ...repeats].slice(0, impCount));
+  room.lastImposters = new Set(imposterIds);
 
   room.round = {
     word, catId: cat.id, catName: cat.name, hintWords,
@@ -196,14 +203,35 @@ function skipUnavailableTurns(room) {
   let guard = 0;
   while (guard++ <= r.order.length) {
     if (r.turnIndex >= r.order.length) { startVotePhase(room); return; }
-    if (isAvailable(room, r.order[r.turnIndex])) return;
+    if (isAvailable(room, r.order[r.turnIndex])) { startTurnTimer(room); return; }
     r.turnIndex++;
   }
   startVotePhase(room);
 }
 
 const VOTE_SECONDS = Number(process.env.VOTE_SECONDS) || 30; // override in tests only
+const TURN_SECONDS = Number(process.env.TURN_SECONDS) || 40; // max time to type a clue word
 const LOBBY_SECONDS = Number(process.env.LOBBY_SECONDS) || 60; // public-room auto-start
+
+// Each player gets TURN_SECONDS to type their clue. If they don't, their turn is
+// auto-skipped ("Skipped") and play moves on — one slow/AFK player can't stall.
+function clearTurnTimer(room) {
+  if (room.round && room.round.turnTimer) { clearTimeout(room.round.turnTimer); room.round.turnTimer = null; }
+}
+function startTurnTimer(room) {
+  clearTurnTimer(room);
+  const r = room.round;
+  r.turnDeadline = now() + TURN_SECONDS * 1000;
+  r.turnTimer = setTimeout(() => {
+    if (room.round !== r || room.status !== "playing") return;
+    const id = r.order[r.turnIndex];
+    if (isAvailable(room, id)) {
+      r.clues.push({ playerId: id, name: room.players.get(id).name, words: ["Skipped"], roundNo: r.roundNo, skipped: true });
+    }
+    advanceTurn(room);
+    broadcast(room);
+  }, TURN_SECONDS * 1000);
+}
 const CHAT_KEEP = 50;         // most recent chat messages retained per room
 const CHAT_MAX_LEN = 160;
 const CHAT_MIN_GAP = 350;     // ms between a player's messages (light rate limit)
@@ -253,6 +281,8 @@ function scheduleVoteTimeout(room) {
 
 // After the clue pass, everyone alive votes. Votes pile onto the cumulative tally.
 function startVotePhase(room) {
+  clearTurnTimer(room);
+  room.round.turnDeadline = null;
   room.status = "voting";
   room.round.votes = new Map();
   scheduleVoteTimeout(room);
@@ -300,6 +330,7 @@ function maybeResolveVotes(room) {
 function endGame(room, winner) {
   const r = room.round;
   if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
+  clearTurnTimer(room);
   r.result = {
     winner,                                  // "civilians" | "imposters"
     word: r.word,

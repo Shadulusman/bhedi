@@ -1,4 +1,4 @@
-process.env.PORT = "8812"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "1";
+process.env.PORT = "8812"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "1"; process.env.TURN_SECONDS = "3";
 require("../server.js");
 const WebSocket = require("ws");
 const URL = "ws://127.0.0.1:8812";
@@ -123,6 +123,26 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},45000);
   ok("founder reclaims host on reconnect", cs[1].state.players.find(p=>p.isHost)?.name==="Founder");
   ok("reconnected founder sees itself as host", back.state && back.state.isHost===true);
   [back, cs[1], cs[2]].forEach(c=>c.close()); await wait(300);
+
+  // ---- TURN AUTO-SKIPS after TURN_SECONDS (nobody types) ----
+  cs = await room(3,["T1","T2","T3"]);
+  cs[0].sendj({type:"start"}); await wait(400);
+  const turnBefore = cs[0].state.round.turnPlayerId;
+  ok("current turn has a deadline", typeof cs[0].state.round.turnDeadline==="number");
+  await wait(3400); // > TURN_SECONDS, nobody clued
+  ok("turn auto-advances when nobody types", cs[0].state.round.turnPlayerId!==turnBefore || cs[0].state.status!=="playing");
+  ok("a Skipped clue is recorded", cs[0].state.round.clues.some(c=>c.words[0]==="Skipped"));
+  cs.forEach(c=>c.close()); await wait(300);
+
+  // ---- IMPOSTER DOESN'T REPEAT BACK-TO-BACK ----
+  cs = await room(3,["R1","R2","R3"]);
+  cs[0].sendj({type:"start"}); await wait(300);
+  const imp1 = cs.find(x=>x.state.round.yourRole==="imposter").youId;
+  cs[0].sendj({type:"backToLobby"}); await wait(150);
+  cs[0].sendj({type:"start"}); await wait(300);
+  const imp2 = cs.find(x=>x.state.round.yourRole==="imposter").youId;
+  ok("imposter is not the same person two games running", imp1!==imp2);
+  cs.forEach(c=>c.close()); await wait(300);
 
   // ---- START WITH 2 PLAYERS BLOCKED ----
   cs = await room(2,["X","Y"]);

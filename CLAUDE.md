@@ -220,6 +220,17 @@ lives on the round object; every resolution path (`resolveVote`, `endGame`)
 clears it, and callbacks check `room.round === r` so a stale timeout can't act on
 a fresh game after `again`.
 
+**Per-turn clock:** each turn has `TURN_SECONDS` (40s, env-overridable) —
+`startTurnTimer` runs when `skipUnavailableTurns` lands on a live player; if they
+don't clue in time it records a `"Skipped"` clue and advances. `round.turnDeadline`
+(ms) is in state so the client shows the countdown pill. Cleared on
+vote/end/leave. Online/offline is shown per player in-game via `order[].connected`.
+
+**Imposter anti-repeat:** `startRound` picks imposters from players who WEREN'T
+imposter last game first (`room.lastImposters`), so the same person isn't the
+imposter two games running. Assignment is otherwise random (Fisher-Yates) — a
+200-game distribution check was even; the repeat-guard is purely for *feel*.
+
 Turn order is **reshuffled every round** (`order` in `startRound`, via the
 Fisher-Yates `shuffle()` helper — not `sort(() => Math.random() - .5)`, which
 looked like a shuffle but was heavily biased toward keeping early elements in

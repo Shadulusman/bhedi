@@ -512,6 +512,15 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .rost-kick svg{width:13px;height:13px;}
 .rost-kick:active{transform:scale(.9);}
 .rost-kick:hover{border-color:var(--gold);color:var(--gold);}
+/* per-turn countdown pill (max 40s) */
+.turn-clock{display:inline-flex;align-items:center;gap:7px;background:#16181F;color:#fff;font-family:var(--ff-mono);font-weight:700;font-size:14px;padding:6px 12px;border-radius:100px;}
+.turn-clock .tc-dot{width:8px;height:8px;border-radius:50%;background:#F5B547;}
+.turn-clock.warn{background:var(--gold);}
+.turn-clock.warn .tc-dot{background:#fff;animation:blink .7s ease-in-out infinite;}
+/* online/offline dot shown next to players during the game */
+.on-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--ok);margin-left:2px;}
+.on-dot.off{background:var(--muted-2);}
+.pf-row .on-dot,.vrow .on-dot{align-self:center;}
 </style>
 </head>
 <body>
@@ -694,7 +703,10 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
   <!-- ===== PLAY (clues) ===== -->
   <section class="screen" id="s-play">
     <div class="topbar">
-      <div class="stage-count" id="playRound">Round 1</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="stage-count" id="playRound">Round 1</div>
+        <div class="turn-clock hidden" id="turnClock"><span class="tc-dot"></span><span id="turnClockTxt">0:40</span></div>
+      </div>
       <div class="topbar-actions">
         <button class="iconbtn chat-btn hidden" id="playChatBtn" aria-label="Chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-11.9 7.8L3 21l1.8-5.3A8.5 8.5 0 1 1 21 11.5Z"/></svg>
@@ -855,6 +867,7 @@ const S = {
   voteTimerHandle:null, openRoomsHandle:null, roomsTick:null, lobbyTick:null,
   rooms:[], chatOpen:false, chatSeen:0,
   pendingIntent:null, wakeTimer:null, createPublic:false, rejoinPending:false,
+  turnTimerHandle:null,
 };
 
 function go(id){
@@ -1064,7 +1077,7 @@ function leave(){
   S.intentionalClose = true;
   localStorage.removeItem("nocap_session");
   if (S.ws) S.ws.close();
-  clearInterval(S.voteTimerHandle); clearInterval(S.lobbyTick);
+  clearInterval(S.voteTimerHandle); clearInterval(S.lobbyTick); clearInterval(S.turnTimerHandle);
   closeChat();
   S.state=null; S.code=""; S.youId=null; S.roleSeen=false; S.chatSeen=0;
   startRoomsBrowser(); // back at entry — resume the public-room list
@@ -1190,6 +1203,7 @@ function render(){
 
   if (s.status !== "voting") clearInterval(S.voteTimerHandle);
   if (s.status !== "lobby") clearInterval(S.lobbyTick);
+  if (s.status !== "playing") clearInterval(S.turnTimerHandle);
   stopRoomsBrowser(); // we're in a room now — no need to poll the public list
 
   // chat: play the join sound + keep buttons/badge fresh on every snapshot
@@ -1298,9 +1312,11 @@ function playFeedHtml(r, youId){
     else if (p.id === r.turnPlayerId) st = `<span class="pf-typing"><i></i><i></i><i></i></span>`;
     else if (p.id === nextId) st = `<span class="pf-muted">Up next</span>`;
     else st = `<span class="pf-muted">…</span>`;
+    const dot = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
     return `<div class="pf-row${p.id===r.turnPlayerId?' turn-now':''}${p.dead?' dead':''}">
       <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
       <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${p.id===youId?' <span class="pf-you">You</span>':''}</div>${st}</div>
+      ${dot}
     </div>`;
   }).join("");
 }
@@ -1330,6 +1346,21 @@ function renderPlay(){
   $("#turnN").textContent = dead ? "Watch it play out" : (mine ? "Type your clue" : (r.turnName || "—"));
 
   $("#feed").innerHTML = playFeedHtml(r, s.youId);
+
+  // per-turn countdown pill (max 40s) — shows the current turn's time for everyone
+  clearInterval(S.turnTimerHandle);
+  const clock = $("#turnClock");
+  if (r.turnDeadline) {
+    clock.classList.remove("hidden");
+    const tickT = () => {
+      const left = Math.max(0, r.turnDeadline - Date.now());
+      const secs = Math.ceil(left/1000);
+      $("#turnClockTxt").textContent = "0:" + String(secs).padStart(2,"0");
+      clock.classList.toggle("warn", secs<=10);
+      if (left<=0) clearInterval(S.turnTimerHandle);
+    };
+    tickT(); S.turnTimerHandle = setInterval(tickT, 250);
+  } else { clock.classList.add("hidden"); }
 
   const prevN = S.prev && S.prev.round ? S.prev.round.clues.length : 0;
   if (r.clues.length > prevN) sfx.clue();
@@ -1378,10 +1409,11 @@ function renderVote(){
     const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
     const el = document.createElement("div");
     el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"");
+    const dot = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
     el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
       <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</div>
         <div class="vr-clue">${escapeHtml(clueTxt)}</div></div>
-      ${badge}${btn}`;
+      ${dot}${badge}${btn}`;
     g.appendChild(el);
   });
   $("#voteProg").textContent = iAmDead ? "You're out — watching the vote" : `${r.votesIn} of ${r.totalVoters} voted`;
