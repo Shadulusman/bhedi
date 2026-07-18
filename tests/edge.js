@@ -1,4 +1,4 @@
-process.env.PORT = "8812"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "1"; process.env.TURN_SECONDS = "3";
+process.env.PORT = "8812"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "1"; process.env.TURN_SECONDS = "3"; process.env.START_COUNTDOWN_MS = "0";
 require("../server.js");
 const WebSocket = require("ws");
 const URL = "ws://127.0.0.1:8812";
@@ -240,6 +240,40 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},70000);
   ok("system lines carry no name", cs[0].state.chat.filter(m=>m.sys).every(m=>!m.name));
   cs[1].close(); await wait(300);
   ok("a leave is announced as a system line", cs[0].state.chat.some(m=>m.sys && m.text==="Yan left the room"));
+  cs.forEach(c=>{ try{c.close()}catch(e){} }); await wait(200);
+
+  // ---- COUNTRY relayed in player state ----
+  { const A=client("Flag"); await wait(200); A.sendj({type:"create",name:"Flag",country:"in"}); await wait(300);
+    ok("country is stored + normalised to ISO-2", A.state.players[0].country==="IN");
+    const J=client("Jp"); await wait(150); J.sendj({type:"join",code:A.code,name:"Jp",country:"JP-x!"}); await wait(300);
+    ok("a joiner's country is sanitised", A.state.players.find(p=>p.name==="Jp").country==="JP");
+    A.close(); J.close(); await wait(200);
+  }
+
+  // ---- DEAD PLAYERS MAY VOTE ----
+  cs = await room(4,["Da","Db","Dc","Dd"]);
+  cs[0].sendj({type:"settings",settings:{imposters:1}}); await wait(150);
+  cs[0].sendj({type:"start"}); await wait(300);
+  await playToVote(cs);
+  { // round 1: eliminate a civilian by a clean 2-vote plurality (all four vote)
+    const imp = cs.find(x=>x.state.round.yourRole==="imposter").youId;
+    const victim = cs.find(x=>x.youId!==imp).youId;
+    const rest = cs.filter(x=>x.youId!==imp && x.youId!==victim);   // the two others
+    rest.forEach(x=>x.sendj({type:"vote",targetId:victim}));         // victim = 2
+    cs.find(x=>x.youId===imp).sendj({type:"vote",targetId:rest[0].youId});    // scatter 1
+    cs.find(x=>x.youId===victim).sendj({type:"vote",targetId:rest[1].youId}); // scatter 1
+    await wait(800);
+    ok("someone was eliminated round 1", cs[0].state.status==="playing" && cs[0].state.round.order.some(o=>o.dead));
+    const deadId = cs[0].state.round.order.find(o=>o.dead).id;
+    await playToVote(cs);
+    ok("reached round-2 voting", cs[0].state.status==="voting");
+    const before = cs[0].state.round.votesIn;
+    const total = cs[0].state.round.totalVoters;
+    const aliveTarget = cs[0].state.round.order.find(o=>!o.dead).id;
+    cs.find(x=>x.youId===deadId).sendj({type:"vote",targetId:aliveTarget}); await wait(300);
+    ok("a DEAD player's vote is counted", cs[0].state.round.votesIn===before+1);
+    ok("totalVoters includes the dead", total===4);
+  }
   cs.forEach(c=>{ try{c.close()}catch(e){} }); await wait(200);
 
   console.log("\n"+(fail.length?"FAILURES: "+fail.join("; "):"ALL EDGE CASES PASSED"));

@@ -1,4 +1,4 @@
-process.env.PORT = "8811"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "2";
+process.env.PORT = "8811"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "2"; process.env.START_COUNTDOWN_MS = "0";
 require("../server.js");
 const WebSocket = require("ws");
 const URL = "ws://127.0.0.1:8811";

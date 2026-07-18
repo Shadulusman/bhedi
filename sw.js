@@ -1,4 +1,4 @@
-const CACHE = "nocap-v17";
+const CACHE = "nocap-v18";
 const ASSETS = [
   "./",
   "./index.html",

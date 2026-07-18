@@ -14,18 +14,25 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 /* ---- word data (server owns the secret; clients never see it early) ---- */
 const CATEGORIES = [
-  {id:"easy",emo:"🍎",name:"Easy Words",words:["Apple","Pizza","Dog","Cat","Car","Phone","Chair","Table","Book","School","Teacher","Doctor","House","Tree","Sun","Moon","Beach","Mountain","Cake","Ice Cream","Coffee","Bus","Train","Football","Camera","Clock","Window","Mirror","Umbrella","Backpack"]},
-  {id:"trending",emo:"🔥",name:"Trending",words:["ChatGPT","TikTok","Instagram","Reels","Podcast","AI","Influencer","Crypto","Bitcoin","Meme","Viral","Netflix","Spotify","iPhone","Tesla","Drone","VR","Electric Car","Selfie","Hashtag","Livestream","YouTube Shorts","Creator","Emoji","Threads","Discord","Snapchat","Esports","Metaverse"]},
-  {id:"world",emo:"🌍",name:"Around the World",words:["India","Japan","Brazil","France","Canada","Australia","Dubai","New York","Paris","London","Taj Mahal","Eiffel Tower","Great Wall","Mount Everest","Sahara","Amazon Rainforest","Antarctica","Niagara Falls","Bali","Maldives","Rome","Tokyo","Sydney","Singapore","Iceland","Venice","Swiss Alps","Pyramids","Statue of Liberty","Burj Khalifa"]},
-  {id:"ent",emo:"🎬",name:"Entertainment",words:["Avengers","Batman","Superman","Harry Potter","Spider-Man","Iron Man","Shrek","Frozen","Minions","Lion King","Friends","Breaking Bad","Money Heist","Stranger Things","Squid Game","Interstellar","Titanic","Avatar","John Wick","Mission Impossible","Naruto","One Piece","Pokemon","Minecraft","GTA","BGMI","Free Fire","Valorant","Mario","SpongeBob"]},
-  {id:"everyday",emo:"🧴",name:"Everyday Things",words:["Toothbrush","Pillow","Soap","Shampoo","Remote","TV","Laptop","Keyboard","Mouse","Wallet","Keys","Bottle","Spoon","Fork","Knife","Plate","Pan","Microwave","Fridge","Fan","AC","Light Bulb","Curtain","Bucket","Mug","Scissors","Pen","Notebook","Helmet","Watch"]},
-  {id:"animals",emo:"🦁",name:"Animals & Nature",words:["Lion","Tiger","Elephant","Giraffe","Penguin","Kangaroo","Koala","Panda","Wolf","Fox","Bear","Monkey","Horse","Cow","Goat","Rabbit","Snake","Crocodile","Shark","Dolphin","Whale","Octopus","Peacock","Eagle","Parrot","Rose","Sunflower","Coconut Tree","Bamboo","Volcano"]},
-  {id:"sports",emo:"⚽",name:"Sports & Leisure",words:["Cricket","Football","Tennis","Basketball","Volleyball","Badminton","Chess","Swimming","Golf","Hockey","Messi","Ronaldo","Virat Kohli","MS Dhoni","Sachin Tendulkar","Neeraj Chopra","Olympics","World Cup","IPL","Wimbledon","Penalty","Goalkeeper","Bat","Helmet","Referee","Gym","Yoga","Cycling","Running","Skateboard"]},
-  {id:"school",emo:"🎒",name:"School",words:["Principal","Teacher","Student","Homework","Exam","Blackboard","Chalk","Pencil","Notebook","Lunch Box","Uniform","Library","Science Lab","Math","History","Geography","Biology","Chemistry","Physics","Calculator","Project","Report Card","Classroom","Desk","Backpack","Compass","Glue","Marker","Whiteboard","Graduation"]},
-  {id:"celebration",emo:"🎉",name:"Celebrations",words:["Birthday","Wedding","Diwali","Eid","Christmas","New Year","Halloween","Holi","Onam","Vishu","Thanksgiving","Anniversary","Baby Shower","Fireworks","Gift","Cake","Party","Balloon","Confetti","Music","Dance","DJ","Festival","Carnival","Lantern","Decoration","Family Dinner","Vacation","Parade","Picnic"]},
-  {id:"celebs",emo:"⭐",name:"Celebrities",words:["Shah Rukh Khan","Salman Khan","Aamir Khan","Deepika Padukone","Alia Bhatt","Ranbir Kapoor","Rajinikanth","Allu Arjun","Mohanlal","Mammootty","Prabhas","Yash","Virat Kohli","MS Dhoni","Sachin Tendulkar","Cristiano Ronaldo","Lionel Messi","Taylor Swift","Ed Sheeran","Justin Bieber","Dwayne Johnson","Tom Cruise","Emma Watson","Robert Downey Jr.","Chris Hemsworth","Zendaya","MrBeast","PewDiePie","Elon Musk","Mark Zuckerberg"]},
+  {id:"easy",emo:"🍎",name:"Easy Words",words:["Apple","Pizza","Dog","Cat","Car","Phone","Chair","Table","Book","School","Teacher","Doctor","House","Tree","Sun","Moon","Beach","Mountain","Cake","Ice Cream","Coffee","Bus","Train","Football","Camera","Clock","Window","Mirror","Umbrella","Backpack","Rainbow","Bicycle","Garden","Bridge","Candle","Ladder","Basket","Rope","Kite","Sandcastle"]},
+  {id:"trending",emo:"🔥",name:"Trending",words:["ChatGPT","TikTok","Instagram","Reels","Podcast","AI","Influencer","Crypto","Bitcoin","Meme","Viral","Netflix","Spotify","iPhone","Tesla","Drone","VR","Electric Car","Selfie","Hashtag","Livestream","YouTube Shorts","Creator","Emoji","Threads","Discord","Snapchat","Esports","Metaverse","Deepfake","Prompt","Wordle","Twitch","Vision Pro","Rizz","Skibidi","Chatbot","Streaming","Trend"]},
+  {id:"world",emo:"🌍",name:"Around the World",words:["India","Japan","Brazil","France","Canada","Australia","Dubai","New York","Paris","London","Taj Mahal","Eiffel Tower","Great Wall","Mount Everest","Sahara","Amazon Rainforest","Antarctica","Niagara Falls","Bali","Maldives","Rome","Tokyo","Sydney","Singapore","Iceland","Venice","Swiss Alps","Pyramids","Statue of Liberty","Burj Khalifa","Egypt","Mexico","Norway","Kenya","Thailand","Greece","Turkey","Morocco","Nepal","Peru"]},
+  {id:"ent",emo:"🎬",name:"Entertainment",words:["Avengers","Batman","Superman","Harry Potter","Spider-Man","Iron Man","Shrek","Frozen","Minions","Lion King","Friends","Breaking Bad","Money Heist","Stranger Things","Squid Game","Interstellar","Titanic","Avatar","John Wick","Mission Impossible","Naruto","One Piece","Pokemon","Minecraft","GTA","BGMI","Free Fire","Valorant","Mario","SpongeBob","Deadpool","Joker","Oppenheimer","Barbie","Wednesday","The Office","Game of Thrones","Dragon Ball","Attack on Titan","Demon Slayer"]},
+  {id:"everyday",emo:"🧴",name:"Everyday Things",words:["Toothbrush","Pillow","Soap","Shampoo","Remote","TV","Laptop","Keyboard","Mouse","Wallet","Keys","Bottle","Spoon","Fork","Knife","Plate","Pan","Microwave","Fridge","Fan","AC","Light Bulb","Curtain","Bucket","Mug","Scissors","Pen","Notebook","Helmet","Watch","Comb","Towel","Charger","Earphones","Slippers","Blanket","Broom","Iron","Kettle","Stapler"]},
+  {id:"animals",emo:"🦁",name:"Animals & Nature",words:["Lion","Tiger","Elephant","Giraffe","Penguin","Kangaroo","Koala","Panda","Wolf","Fox","Bear","Monkey","Horse","Cow","Goat","Rabbit","Snake","Crocodile","Shark","Dolphin","Whale","Octopus","Peacock","Eagle","Parrot","Rose","Sunflower","Coconut Tree","Bamboo","Volcano","Zebra","Cheetah","Hippo","Rhino","Owl","Turtle","Frog","Butterfly","Deer","Camel"]},
+  {id:"sports",emo:"⚽",name:"Sports & Leisure",words:["Cricket","Football","Tennis","Basketball","Volleyball","Badminton","Chess","Swimming","Golf","Hockey","Messi","Ronaldo","Virat Kohli","MS Dhoni","Sachin Tendulkar","Neeraj Chopra","Olympics","World Cup","IPL","Wimbledon","Penalty","Goalkeeper","Bat","Helmet","Referee","Gym","Yoga","Cycling","Running","Skateboard","Boxing","Karate","Surfing","Archery","Marathon","Formula 1","Serena Williams","Usain Bolt","LeBron James","Table Tennis"]},
+  {id:"school",emo:"🎒",name:"School",words:["Principal","Teacher","Student","Homework","Exam","Blackboard","Chalk","Pencil","Notebook","Lunch Box","Uniform","Library","Science Lab","Math","History","Geography","Biology","Chemistry","Physics","Calculator","Project","Report Card","Classroom","Desk","Backpack","Compass","Glue","Marker","Whiteboard","Graduation","Recess","Assembly","Detention","Semester","Scholarship","Tuition","Eraser","Ruler","Globe","Timetable"]},
+  {id:"celebration",emo:"🎉",name:"Celebrations",words:["Birthday","Wedding","Diwali","Eid","Christmas","New Year","Halloween","Holi","Onam","Vishu","Thanksgiving","Anniversary","Baby Shower","Fireworks","Gift","Cake","Party","Balloon","Confetti","Music","Dance","DJ","Festival","Carnival","Lantern","Decoration","Family Dinner","Vacation","Parade","Picnic","Housewarming","Reunion","Bonfire","Countdown","Gift Wrap","Surprise Party","Toast","Ceremony","Farewell","Reception"]},
+  {id:"celebs",emo:"⭐",name:"Celebrities",words:["Shah Rukh Khan","Salman Khan","Aamir Khan","Deepika Padukone","Alia Bhatt","Ranbir Kapoor","Rajinikanth","Allu Arjun","Mohanlal","Mammootty","Prabhas","Yash","Virat Kohli","MS Dhoni","Sachin Tendulkar","Cristiano Ronaldo","Lionel Messi","Taylor Swift","Ed Sheeran","Justin Bieber","Dwayne Johnson","Tom Cruise","Emma Watson","Robert Downey Jr.","Chris Hemsworth","Zendaya","MrBeast","PewDiePie","Elon Musk","Mark Zuckerberg","Beyonce","Rihanna","Ariana Grande","Selena Gomez","Kim Kardashian","Nayanthara","Vijay","Kamal Haasan","Ranveer Singh","Hrithik Roshan"]},
+  {id:"food",emo:"🍔",name:"Food & Drinks",words:["Burger","Biryani","Sushi","Pasta","Tacos","Noodles","Sandwich","Pancake","Waffle","Donut","Samosa","Dosa","Momos","Ramen","Curry","Fries","Nachos","Popcorn","Chocolate","Cookie","Cupcake","Brownie","Smoothie","Milkshake","Lemonade","Espresso","Green Tea","Cola","Mango Juice","Watermelon","Strawberry","Cheese","Butter","Honey","Pickle","Ketchup","Kebab","Falafel","Pudding","Croissant"]},
+  {id:"jobs",emo:"💼",name:"Jobs & Careers",words:["Pilot","Chef","Firefighter","Nurse","Engineer","Lawyer","Architect","Electrician","Plumber","Farmer","Scientist","Journalist","Photographer","Dentist","Pharmacist","Accountant","Barber","Tailor","Carpenter","Mechanic","Astronaut","Soldier","Police Officer","Detective","Judge","Waiter","Cashier","Librarian","Veterinarian","Surgeon","Painter","Sculptor","Dancer","Singer","Actor","Director","Programmer","Designer","Banker","Coach"]},
+  {id:"music",emo:"🎵",name:"Music",words:["Guitar","Piano","Drums","Violin","Flute","Saxophone","Trumpet","Microphone","Headphones","DJ","Concert","Album","Playlist","Lyrics","Melody","Rap","Rock","Jazz","Pop","Hip Hop","Classical","Reggae","Beatbox","Karaoke","Choir","Orchestra","Bass","Keyboard","Speaker","Vinyl","Grammy","Music Video","Ringtone","Remix","Ukulele","Harmonica","Tabla","Sitar","Trombone","Cello"]},
+  {id:"space",emo:"🚀",name:"Science & Space",words:["Rocket","Planet","Galaxy","Telescope","Satellite","Gravity","Comet","Asteroid","Black Hole","Mars","Saturn","Moon Landing","Space Station","Atom","Molecule","DNA","Microscope","Magnet","Electricity","Laser","Robot","Dinosaur","Fossil","Experiment","Laboratory","Solar System","Meteor","Nebula","Spaceship","Alien","Oxygen","Battery","Circuit","Gene","Evolution","Big Bang","Quantum","Gravity Wave","Supernova","Astronomy"]},
+  {id:"travel",emo:"✈️",name:"Travel & Transport",words:["Airplane","Helicopter","Cruise Ship","Submarine","Motorcycle","Scooter","Truck","Taxi","Metro","Tram","Ferry","Yacht","Jet Ski","Hot Air Balloon","Cable Car","Rickshaw","Ambulance","Passport","Suitcase","Boarding Pass","Airport","Highway","Roundabout","Tunnel","Railway Station","Harbor","Compass","Map","Road Trip","Traffic Light","Toll Booth","Seatbelt","Runway","Cockpit","Gondola","Caravan","Sailboat","Monorail","Lighthouse","Backpacking"]},
 ];
 const CAT_INDEX = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+// normalise a client-supplied country to a 2-letter ISO code (or "" = hidden)
+const cc = s => String(s || "").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
 const PUBLIC_CATS = CATEGORIES.map(c => ({ id:c.id, emo:c.emo, name:c.name, count:c.words.length }));
 
 /* ---- helpers ---- */
@@ -78,7 +85,7 @@ function makeRoom(hostId) {
 function sanitize(room, pid) {
   const isHost = room.hostId === pid;
   const players = [...room.players.values()].map(p => ({
-    id: p.id, name: p.name, connected: p.connected, isHost: p.id === room.hostId,
+    id: p.id, name: p.name, connected: p.connected, isHost: p.id === room.hostId, country: p.country || "",
   }));
   const base = {
     type: "state",
@@ -122,7 +129,7 @@ function sanitize(room, pid) {
         const p = room.players.get(id);
         const isDead = r.dead.has(id);
         return {
-          id, name: p ? p.name : "?",
+          id, name: p ? p.name : "?", country: p ? (p.country || "") : "",
           connected: p ? p.connected : false,
           dead: isDead,
           role: isDead ? (r.imposterIds.has(id) ? "imposter" : "civilian") : null, // only for the dead
@@ -139,7 +146,7 @@ function sanitize(room, pid) {
       yourHint: amImp ? { category: room.settings.seeCat ? r.catName : null, words: room.settings.hint ? r.hintWords : null } : null,
       voting: room.status === "voting",
       votesIn: r.votes.size,
-      totalVoters: [...alive].filter(id => room.players.get(id) && room.players.get(id).connected).length,
+      totalVoters: voterIds(room).length,   // dead may vote too
       yourVote: r.votes.get(pid) || null,
       voteDeadline: r.voteDeadline || null,
     };
@@ -223,6 +230,8 @@ function skipUnavailableTurns(room) {
 const VOTE_SECONDS = Number(process.env.VOTE_SECONDS) || 30; // override in tests only
 const TURN_SECONDS = Number(process.env.TURN_SECONDS) || 40; // max time to type a clue word
 const LOBBY_SECONDS = Number(process.env.LOBBY_SECONDS) || 60; // public-room auto-start
+// Manual "Start game" runs a short 3·2·1 countdown too (tests set 0 = instant).
+const START_COUNTDOWN_MS = process.env.START_COUNTDOWN_MS != null ? Number(process.env.START_COUNTDOWN_MS) : 3000;
 
 // Each player gets TURN_SECONDS to type their clue. If they don't, their turn is
 // auto-skipped ("Skipped") and play moves on — one slow/AFK player can't stall.
@@ -322,6 +331,11 @@ function voteCounts(room) {
   for (const target of room.round.votes.values()) c.set(target, (c.get(target) || 0) + 1);
   return c;
 }
+// House rule: the DEAD may vote too. Eligible voters = everyone in the round who
+// is still connected (alive or dead). They still may only target a LIVING player.
+function voterIds(room) {
+  return room.round.order.filter(id => { const p = room.players.get(id); return p && p.connected; });
+}
 
 function resolveVote(room) {
   const r = room.round;
@@ -356,8 +370,7 @@ function resolveVote(room) {
 // Resolve the current vote as soon as every alive+connected player has voted.
 function maybeResolveVotes(room) {
   if (room.status !== "voting" || !room.round) return;
-  const alive = aliveIds(room);
-  const voters = alive.filter(id => room.players.get(id) && room.players.get(id).connected).length;
+  const voters = voterIds(room).length;
   if (voters > 0 && room.round.votes.size >= voters) resolveVote(room);
 }
 
@@ -502,7 +515,7 @@ wss.on("connection", (ws) => {
       pid = uid();
       const room = makeRoom(pid);
       room.isPublic = !!msg.public;   // "Create public room" lists it in the browser
-      room.players.set(pid, { id: pid, name, ws, connected: true });
+      room.players.set(pid, { id: pid, name, ws, connected: true, country: cc(msg.country) });
       rooms.set(room.code, room);
       roomCode = room.code;
       ws.send(JSON.stringify({ type: "joined", code: room.code, youId: pid }));
@@ -519,7 +532,7 @@ wss.on("connection", (ws) => {
       if (room.status !== "lobby") return sendErr(ws, "That game already started.");
       if (room.players.size >= MAX_PLAYERS) return sendErr(ws, `Room is full (${MAX_PLAYERS} max).`);
       pid = uid();
-      room.players.set(pid, { id: pid, name, ws, connected: true });
+      room.players.set(pid, { id: pid, name, ws, connected: true, country: cc(msg.country) });
       roomCode = code;
       ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
       sysChat(room, `${name} joined the room`);
@@ -618,7 +631,11 @@ wss.on("connection", (ws) => {
 
     if (t === "start" && room.hostId === pid && room.status === "lobby") {
       if (room.players.size < 3) return sendErr(ws, "Need at least 3 players.");
-      startRound(room);
+      // run the same 3·2·1 countdown as the auto-start (reuses armAutoStart), so
+      // everyone sees it — not just an instant jump into the game.
+      room.autoStartPaused = false;
+      if (START_COUNTDOWN_MS > 0) armAutoStart(room, START_COUNTDOWN_MS);
+      else startRound(room);
       broadcast(room);
       return;
     }
@@ -637,12 +654,11 @@ wss.on("connection", (ws) => {
 
     if (t === "vote" && room.status === "voting") {
       const r = room.round;
-      if (!isAvailable(room, pid)) return;                     // eliminated / gone can't vote
-      const alive = aliveIds(room);
-      if (!alive.includes(msg.targetId)) return;               // can only vote a living player
+      const p = room.players.get(pid);
+      if (!p || !p.connected || !r.order.includes(pid)) return; // must be in the round + connected (dead OK)
+      if (!aliveIds(room).includes(msg.targetId)) return;       // can only vote a LIVING player
       r.votes.set(pid, msg.targetId);
-      const voters = alive.filter(id => room.players.get(id).connected).length;
-      if (r.votes.size >= voters) resolveVote(room);
+      if (r.votes.size >= voterIds(room).length) resolveVote(room);
       broadcast(room);
       return;
     }

@@ -618,6 +618,10 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 .pro-stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:13px 8px;text-align:center;}
 .pro-stat b{display:block;font-family:var(--ff-disp);font-weight:800;font-size:22px;color:var(--cream);}
 .pro-stat span{font-size:11px;color:var(--muted-2);font-weight:600;letter-spacing:.02em;}
+.pro-toggle{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);margin-bottom:12px;font-weight:600;font-size:14px;color:var(--cream);}
+.tgl{width:46px;height:27px;border-radius:100px;background:var(--surface-2);position:relative;cursor:pointer;transition:background var(--dur) var(--ease-out);flex:none;}
+.tgl::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(20,24,40,.35);transition:transform var(--dur) var(--ease-spring);}
+.tgl.on{background:var(--blue);} .tgl.on::after{transform:translateX(19px);}
 
 /* ---- esports type accents (light theme, no glow) ---- */
 .cta{text-transform:uppercase;letter-spacing:.05em;font-size:16px;}
@@ -641,6 +645,11 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 .rtag.civ{background:rgba(18,160,92,.16);color:#0b7a44;}
 .rtag.imp{background:var(--gold);color:#fff;}
 .pf-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:15px;color:#fff;}
+/* country flag badge on the corner of a player avatar */
+.rost .av,.pf-av,.vr-av{position:relative;overflow:visible;}
+.flag{position:absolute;bottom:-3px;right:-4px;width:18px;height:18px;border-radius:50%;background:#fff;
+  display:grid;place-items:center;font-size:11px;line-height:1;box-shadow:0 1px 3px rgba(20,24,40,.35);overflow:hidden;}
+.pf-av .flag,.vr-av .flag{width:19px;height:19px;font-size:12px;}
 .pf-b{flex:1;min-width:0;}
 .pf-nm{font-family:var(--ff-disp);font-weight:700;font-size:16px;color:var(--cream);display:flex;align-items:center;gap:7px;}
 .pf-you{font-family:var(--ff-body);font-size:11px;font-weight:700;color:var(--blue-ink);background:rgba(30,127,224,.14);padding:2px 8px;border-radius:100px;}
@@ -929,7 +938,6 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
         <div class="l" id="turnL">Now typing</div>
         <div class="n" id="turnN">—</div>
       </div>
-      <div class="turn-order" id="turnOrder"></div>
       <div class="feed" id="feed"></div>
       <div style="height:12px"></div>
     </div>
@@ -1083,6 +1091,10 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
       <div class="pro-stat"><b id="stStreak">0</b><span>Win streak</span></div>
       <div class="pro-stat"><b id="stBest">0</b><span>Best streak</span></div>
     </div>
+    <div class="pro-toggle" id="countryToggle">
+      <span>Show my country <b id="countryFlag"></b></span>
+      <span class="tgl" id="countrySwitch"></span>
+    </div>
     <button class="cta ghost" id="proReset" style="font-size:13px;padding:12px;">Reset stats</button>
   </div>
 </div>
@@ -1106,6 +1118,17 @@ const $$ = (s, el=document) => [...el.querySelectorAll(s)];
 const AV = ["#E11D2A","#1E7FE0","#7048E8","#E6007A","#F5711E","#12A05C","#2FA8C7","#3B5BDB","#D6336C","#0CA678","#9C36B5","#F03E3E"];
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} };
 const initials = n => (n||"?").trim().slice(0,1).toUpperCase();
+// country: auto-detected from the browser locale, overridable/hideable in the profile
+function detectCountry(){
+  try { for (const l of (navigator.languages || [navigator.language || ""])){
+    const m = String(l).match(/[-_]([A-Za-z]{2})\b/); if (m) return m[1].toUpperCase(); } } catch(e){}
+  return "";
+}
+function myCountry(){ const s = localStorage.getItem("nocap_country"); return s !== null ? s : detectCountry(); }
+// ISO-2 → flag emoji (regional indicator symbols). "" → no badge.
+function flagOf(cc){ cc = String(cc||"").toUpperCase(); if (!/^[A-Z]{2}$/.test(cc)) return "";
+  return String.fromCodePoint(...[...cc].map(c => 127397 + c.charCodeAt(0))); }
+function flagBadge(cc){ const f = flagOf(cc); return f ? `<span class="flag">${f}</span>` : ""; }
 
 let AC;
 function tone(f,dur=.12,type="sine",vol=.16){
@@ -1333,7 +1356,7 @@ function replayIntent(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
   if (sess && sess.code) { S.rejoinPending = true; send({ type:"rejoin", code:sess.code, youId:sess.youId }); return; }
   const p = S.pendingIntent;
-  if (p) send(p.type === "create" ? { type:"create", name:p.name, public:p.public } : { type:"join", code:p.code, name:p.name });
+  if (p) send(p.type === "create" ? { type:"create", name:p.name, public:p.public, country:myCountry() } : { type:"join", code:p.code, name:p.name, country:myCountry() });
 }
 // The game we were in is gone (server restarted / everyone left). Drop the stale
 // session so create/join works again instead of looping on a dead rejoin.
@@ -1439,17 +1462,36 @@ function pttStop(){
   buzz(8);
   try { if (PTT.rec && PTT.rec.state !== "inactive") PTT.rec.stop(); } catch(e){}
 }
+// Keep every playing clip referenced so it isn't garbage-collected mid-playback
+// (the real cause of "sometimes people can't hear"), and queue any clip the
+// browser blocks (autoplay) to fire on the next user gesture.
+const liveVoice = new Set();
+const pendingVoice = [];
+function b64ToBlob(b64, mime){
+  const bin = atob(b64), len = bin.length, bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime || "audio/webm" });
+}
 function playVoice(m){
   try {
-    const audio = new Audio("data:" + (m.mime || "audio/webm") + ";base64," + m.audio);
+    const url = URL.createObjectURL(b64ToBlob(m.audio, m.mime));
+    const audio = new Audio(); audio.src = url; audio.preload = "auto";
+    liveVoice.add(audio);                                   // hard reference → no GC
     const ind = $("#pttSpeaking");
     $("#pttSpeakingTxt").textContent = m.name || "Someone";
     ind.classList.remove("hidden");
-    const hide = () => ind.classList.add("hidden");
-    audio.onended = hide; audio.onerror = hide;
-    audio.play().catch(()=>{ /* autoplay blocked until first interaction */ hide(); });
+    const done = () => { ind.classList.add("hidden"); liveVoice.delete(audio); URL.revokeObjectURL(url); };
+    audio.onended = done; audio.onerror = done;
+    const pr = audio.play();
+    if (pr && pr.catch) pr.catch(() => { pendingVoice.push({ audio, done }); }); // blocked → retry on gesture
   } catch(e){}
 }
+function flushPendingVoice(){
+  while (pendingVoice.length){ const it = pendingVoice.shift();
+    try { const pr = it.audio.play(); if (pr && pr.catch) pr.catch(it.done); } catch(e){ it.done(); } }
+}
+// any tap/keypress activates the page for audio — flush anything that was blocked
+["pointerdown","keydown","touchstart"].forEach(ev => document.addEventListener(ev, flushPendingVoice, { passive:true }));
 (function wirePTT(){
   const btn = $("#pttBtn");
   let activeId = null;
@@ -1687,6 +1729,10 @@ function renderProfile(){
   $("#stStreak").textContent = p.streak;
   $("#stBest").textContent = p.best;
   anim.bar($("#proBar"), Math.round(into / 500 * 100));
+  // country toggle state
+  const shown = myCountry() !== "";
+  $("#countrySwitch").classList.toggle("on", shown);
+  $("#countryFlag").textContent = shown ? flagOf(myCountry()) : "";
 }
 function openProfile(){ renderProfile(); $("#profileScrim").classList.add("open"); $("#profileSheet").classList.add("open"); buzz(6); }
 function closeProfile(){ $("#profileScrim").classList.remove("open"); $("#profileSheet").classList.remove("open"); }
@@ -1697,6 +1743,13 @@ $("#proReset").addEventListener("click", () => {
   if (!confirm("Reset all your stats and XP? This can't be undone.")) return;
   localStorage.removeItem("nocap_profile"); localStorage.removeItem("nocap_xp");
   updateProfileBadge(); renderProfile();
+});
+$("#countrySwitch").addEventListener("click", () => {
+  const shown = myCountry() !== "";
+  // toggle: hide → store ""; show → clear override so it auto-detects again
+  if (shown) localStorage.setItem("nocap_country", "");
+  else localStorage.removeItem("nocap_country");
+  buzz(8); renderProfile();
 });
 updateProfileBadge();
 
@@ -1848,7 +1901,7 @@ function renderLobby(){
     const el = document.createElement("div");
     el.className = "rost" + (p.id===s.youId ? " you" : "");
     const kick = (s.isHost && p.id!==s.youId) ? `<button class="rost-kick" data-id="${p.id}" aria-label="Remove ${escapeHtml(p.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : "";
-    el.innerHTML = `<span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span>
+    el.innerHTML = `<span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}${flagBadge(p.country)}</span>
       <span class="nm">${escapeHtml(p.name)}${p.id===s.youId?' <span style="color:var(--muted);font-weight:400;font-size:12px;">· you</span>':''}</span>
       ${p.isHost?'<span class="tag">Host</span>':''}
       <span class="dot ${p.connected?'':'off'}"></span>${kick}`;
@@ -1953,7 +2006,7 @@ function playFeedHtml(r, youId){
       : '';
     const right = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>`;
     return `<div class="pf-row${p.id===r.turnPlayerId?' turn-now':''}${p.dead?' dead':''}">
-      <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+      <span class="pf-av" style="background:${avColor(p.name)}">${initials(p.name)}${flagBadge(p.country)}</span>
       <div class="pf-b"><div class="pf-nm">${escapeHtml(p.name)}${you}${deadTags}</div>${st}${clueHistoryHtml(r, p.id)}</div>
       ${right}
     </div>`;
@@ -1975,7 +2028,6 @@ function clueHistoryHtml(r, playerId){
 function renderPlay(){
   const s = S.state, r = s.round; if(!r) return;
   $("#playRound").textContent = `Round ${r.roundNo}`;
-  $("#turnOrder").innerHTML = `<span class="rc-chip">🕵️ ${r.imposters} Imposter${r.imposters>1?"s":""}</span><span class="rc-chip">Round ${r.roundNo}</span>`;
 
   const strip = $("#secretStrip");
   strip.className = "secret " + (r.yourRole==="imposter" ? "imp" : "civ");
@@ -2072,7 +2124,7 @@ function renderVote(){
     const you = p.id === s.youId;
     const votedThis = r.yourVote === p.id;
     let btn = "";
-    if (!p.dead && !iAmDead && !you) btn = `<button class="v-btn${votedThis?' voted':''}" data-id="${p.id}">${votedThis?'Voted':'Vote'}</button>`;
+    if (!p.dead && !you) btn = `<button class="v-btn${votedThis?' voted':''}" data-id="${p.id}">${votedThis?'Voted':'Vote'}</button>`;  // the dead may vote too
     else if (you) btn = `<span class="v-youtag">You</span>`;
     const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
     const el = document.createElement("div");
@@ -2082,14 +2134,14 @@ function renderVote(){
       ? ` <span class="rtag dead">Dead</span>${p.role ? ` <span class="rtag ${p.role==='imposter'?'imp':'civ'}">${p.role==='imposter'?'Imposter':'Civilian'}</span>` : ''}`
       : '';
     const right = p.dead ? "" : `<span class="on-dot${p.connected?'':' off'}" title="${p.connected?'online':'offline'}"></span>${badge}${btn}`;
-    el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+    el.innerHTML = `<span class="vr-av" style="background:${avColor(p.name)}">${initials(p.name)}${flagBadge(p.country)}</span>
       <div class="vr-b"><div class="vr-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}${deadTags}</div>
         <div class="vr-clue">${escapeHtml(clueTxt)}</div>${clueHistoryHtml(r, p.id)}</div>
       ${right}`;
     g.appendChild(el);
   });
   if (flipState) Flip.from(flipState, { duration: 0.5, ease: "power2.inOut", absolute: true });
-  $("#voteProg").textContent = iAmDead ? "You're out — watching the vote" : `${r.votesIn} of ${r.totalVoters} voted`;
+  $("#voteProg").textContent = `${r.votesIn} of ${r.totalVoters} voted` + (iAmDead ? " · you can still vote" : "");
   $("#forceFooter").classList.toggle("hidden", !s.isHost);
 
   clearInterval(S.voteTimerHandle);

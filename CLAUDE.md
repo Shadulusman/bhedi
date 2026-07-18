@@ -114,7 +114,13 @@ helper was removed). Win check: **civilians win** when all imposters are
 eliminated; **imposters win** when `aliveImposters >= aliveCivilians`; otherwise
 `roundNo++` and a new clue pass starts. `endGame` builds the reveal. Key round
 fields: `imposterIds`, `order`, `dead` (Set), `tally` (Map, reveal totals only),
-`roundNo`, `deaths`. Votes are cast on ALIVE players only; the dead spectate.
+`roundNo`, `deaths`. Vote TARGETS must be alive, but **the dead may cast votes too**
+(house rule) — `voterIds(room)` = every connected player in the round (alive or
+dead), used for the "everyone voted" resolution and `totalVoters`. Manual "Start
+game" runs the same 3·2·1 countdown as the auto-start (`armAutoStart`, gated by
+`START_COUNTDOWN_MS`, default 3000; tests set 0 for instant start). Players carry a
+`country` (ISO-2, auto-detected from locale, hideable in the profile) shown as a
+flag badge on their avatar. There are 15 word categories (40 words each).
 `order[].votes` in state is the **live current-round** count (updates as people
 vote) so each player shows a real-time vote badge during the vote phase.
 

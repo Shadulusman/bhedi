@@ -1,7 +1,7 @@
 import subprocess, time, os, signal, re, pathlib
 from playwright.sync_api import sync_playwright
 
-env = dict(os.environ, PORT="8821", HOST="127.0.0.1")
+env = dict(os.environ, PORT="8821", HOST="127.0.0.1", START_COUNTDOWN_MS="0")
 srv = subprocess.Popen(["node","../server.js"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.2)
 
