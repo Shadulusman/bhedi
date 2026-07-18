@@ -296,6 +296,33 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .card-sweep{position:absolute;top:-10%;bottom:-10%;left:0;width:55%;pointer-events:none;transform:skewX(-16deg);
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);}
 .fx-spark{position:fixed;z-index:79;width:9px;height:9px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px rgba(255,255,255,.5);}
+/* discussion: the speaking / current-turn player glows + a live voice indicator */
+.pf-row.turn-now{animation:speakGlow 2s var(--ease-out) infinite;}
+@keyframes speakGlow{0%,100%{box-shadow:0 0 0 0 rgba(30,127,224,0),0 10px 26px -16px rgba(30,127,224,.5);}50%{box-shadow:0 0 0 3px rgba(30,127,224,.28),0 12px 30px -14px rgba(30,127,224,.55);}}
+.voice-eq{display:inline-flex;align-items:flex-end;gap:2px;height:12px;margin-left:2px;vertical-align:middle;}
+.voice-eq i{width:3px;background:var(--blue);border-radius:2px;animation:eq .9s ease-in-out infinite;}
+.voice-eq i:nth-child(1){height:5px;animation-delay:0s;}.voice-eq i:nth-child(2){height:11px;animation-delay:.15s;}
+.voice-eq i:nth-child(3){height:7px;animation-delay:.3s;}.voice-eq i:nth-child(4){height:10px;animation-delay:.45s;}
+@keyframes eq{0%,100%{transform:scaleY(.4);}50%{transform:scaleY(1);}}
+/* voting: the current front-runner gets a spotlight pulse */
+.vrow.leading{border-color:rgba(225,29,42,.6)!important;background:linear-gradient(180deg,rgba(225,29,42,.09),transparent)!important;animation:leadPulse 1.6s var(--ease-out) infinite;}
+@keyframes leadPulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,42,0);}50%{box-shadow:0 0 0 3px rgba(225,29,42,.22);}}
+/* lobby: ready/start button breathes when it's actionable */
+#startOnline:not(:disabled){animation:readyPulse 2.4s var(--ease-out) infinite;}
+@keyframes readyPulse{0%,100%{box-shadow:0 12px 40px -8px rgba(225,29,42,.45);}50%{box-shadow:0 14px 46px -6px rgba(225,29,42,.7),0 0 0 3px rgba(225,29,42,.16);}}
+/* copy-code success flash */
+.copied{animation:copiedFlash .6s var(--ease-out);}
+@keyframes copiedFlash{0%{transform:scale(1);}40%{transform:scale(1.08);background:rgba(18,160,92,.16);}100%{transform:scale(1);}}
+/* premium button loading state: label fades, an orbit spinner appears */
+.cta.loading{color:transparent!important;pointer-events:none;}
+.cta.loading::after{content:"";position:absolute;top:50%;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;
+  border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* skeleton shimmer for loading lists */
+.skel{position:relative;overflow:hidden;background:var(--surface-2);border-radius:var(--r-md);}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:shimmer 1.3s infinite;}
+@keyframes shimmer{100%{transform:translateX(100%);}}
 /* rows/cards stagger-in (added by JS as .stg, cleared after) */
 .stg{opacity:0;transform:translateY(10px);}
 /* a soft entrance for whichever screen just became active */
@@ -977,6 +1004,7 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 
 <!-- animation engine (self-hosted, cached by the service worker) -->
 <script src="./gsap.min.js"></script>
+<script src="./Flip.min.js"></script>
 <script>
 /* =========================================================
    NOCAP · online client
@@ -1213,7 +1241,7 @@ function bailToEntry(msg){
   S.intentionalClose = true; if (S.ws) { try { S.ws.close(); } catch(e){} }
   S.pendingIntent = null; S.state = null; S.code = ""; S.youId = null; S.connected = false;
   clearTimeout(S.wakeTimer); connBanner(false);
-  $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
+  $("#goBtn").disabled = false; $("#goBtn").classList.remove("loading"); $("#entryNote").textContent = "Runs on your own game server";
   $("#chatBar").classList.add("hidden"); document.body.classList.remove("has-chatbar");
   startRoomsBrowser(); go("entry");
   if (msg) toast(msg);
@@ -1235,7 +1263,7 @@ function connect(then){
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.type === "joined") { S.code = m.code; S.youId = m.youId;
       S.pendingIntent = null; S.rejoinPending = false; clearTimeout(S.wakeTimer);
-      $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
+      $("#goBtn").disabled = false; $("#goBtn").classList.remove("loading"); $("#entryNote").textContent = "Runs on your own game server";
       localStorage.setItem("nocap_session", JSON.stringify({ code:m.code, youId:m.youId })); return; }
     if (m.type === "kicked") { bailToEntry("The host removed you from the room"); return; }
     if (m.type === "error") {
@@ -1441,7 +1469,7 @@ $("#goBtn").addEventListener("click", () => {
   // fresh action from the entry screen — drop any old session so we don't get
   // hijacked into rejoining a dead room instead of creating/joining.
   localStorage.removeItem("nocap_session"); S.rejoinPending = false;
-  $("#goBtn").disabled = true; $("#entryNote").textContent = "Connecting…";
+  $("#goBtn").disabled = true; $("#goBtn").classList.add("loading"); $("#entryNote").textContent = "Connecting…";
   connect(replayIntent);
   clearTimeout(S.wakeTimer);
   S.wakeTimer = setTimeout(() => {
@@ -1476,6 +1504,9 @@ $("#roster").addEventListener("click", e => {
   send({ type:"kick", targetId: k.dataset.id }); buzz(12);
 });
 $("#copyCode").addEventListener("click", async () => {
+  const chip = $("#lobbyCode");
+  if (chip) { chip.classList.remove("copied"); void chip.offsetWidth; chip.classList.add("copied"); }
+  buzz(8);
   try { await navigator.clipboard.writeText(S.code); toast("Code copied"); } catch { toast(S.code); }
 });
 $("#shareCode").addEventListener("click", async () => {
@@ -1686,6 +1717,13 @@ function renderLobby(){
       <span class="dot ${p.connected?'':'off'}"></span>${kick}`;
     r.appendChild(el);
   });
+  // pop any roster row whose player wasn't here on the previous lobby snapshot
+  if (S.prev && S.prev.status === "lobby" && G && !reduceMotion) {
+    const had = new Set((S.prev.players || []).map(p => p.id));
+    const fresh = [...r.children].filter((el, i) => s.players[i] && !had.has(s.players[i].id));
+    if (fresh.length) G.fromTo(fresh, { opacity: 0, y: -8, scale: 0.96 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(2)", stagger: 0.05, clearProps: "transform,opacity" });
+  }
   if (S.prev && S.prev.status==="lobby" && s.players.length > S.prev.players.length) sfx.join();
 
   $("#hostSettings").classList.toggle("hidden", !s.isHost);
@@ -1871,7 +1909,15 @@ function renderVote(){
   $("#voteImpChip").textContent = `${r.imposters} Imposter${r.imposters>1?"s":""}`;
   $("#voteSub").innerHTML = `The <b>most-voted</b> player is out this round. A tie means nobody goes out.`;
 
-  const g = $("#oVoteGrid"); g.innerHTML = "";
+  const g = $("#oVoteGrid");
+  // current front-runner (unique max among the alive) → cinematic spotlight
+  let leadId = null, leadMax = 0, leadTie = false;
+  r.order.forEach(p => { if (p.dead) return; const v = p.votes || 0;
+    if (v > leadMax) { leadMax = v; leadId = p.id; leadTie = false; } else if (v === leadMax && v > 0) leadTie = true; });
+  if (leadMax === 0 || leadTie) leadId = null;
+  // capture positions BEFORE rebuild so GSAP Flip can animate any reorder (dead sink)
+  const flipState = (window.Flip && !reduceMotion) ? Flip.getState("#oVoteGrid .vrow") : null;
+  g.innerHTML = "";
   const rows = r.order.map((p,i) => ({ p, i })).sort((a,b) =>
     (a.p.dead?1:0) - (b.p.dead?1:0) || a.i - b.i         // dead sink to the bottom
   );
@@ -1885,7 +1931,8 @@ function renderVote(){
     else if (you) btn = `<span class="v-youtag">You</span>`;
     const badge = p.votes > 0 ? `<span class="v-badge">${p.votes}</span>` : "";
     const el = document.createElement("div");
-    el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"");
+    el.className = "vrow" + (votedThis?" picked":"") + (p.dead?" dead":"") + (p.id===leadId?" leading":"");
+    el.dataset.flipId = p.id;
     const deadTags = p.dead
       ? ` <span class="rtag dead">Dead</span>${p.role ? ` <span class="rtag ${p.role==='imposter'?'imp':'civ'}">${p.role==='imposter'?'Imposter':'Civilian'}</span>` : ''}`
       : '';
@@ -1896,6 +1943,7 @@ function renderVote(){
       ${right}`;
     g.appendChild(el);
   });
+  if (flipState) Flip.from(flipState, { duration: 0.5, ease: "power2.inOut", absolute: true });
   $("#voteProg").textContent = iAmDead ? "You're out — watching the vote" : `${r.votesIn} of ${r.totalVoters} voted`;
   $("#forceFooter").classList.toggle("hidden", !s.isHost);
 
