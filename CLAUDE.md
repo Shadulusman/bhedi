@@ -119,8 +119,11 @@ fields: `imposterIds`, `order`, `dead` (Set), `tally` (Map, reveal totals only),
 dead), used for the "everyone voted" resolution and `totalVoters`. Manual "Start
 game" runs the same 3·2·1 countdown as the auto-start (`armAutoStart`, gated by
 `START_COUNTDOWN_MS`, default 3000; tests set 0 for instant start). Players carry a
-`country` (ISO-2, auto-detected from locale, hideable in the profile) shown as a
-flag badge on their avatar. There are 15 word categories (40 words each).
+`country` (ISO-2) shown as a flag badge on their avatar. It's resolved **from the
+real client IP** server-side (`x-forwarded-for` → `lookupCountry` via the key-less
+`ipwho.is` HTTPS API, cached per-IP), with the browser-locale guess as the instant
+fallback and on private-IP/lookup failure; the client sends `share` (profile toggle)
+and the server sends `country:""` when off. There are 15 word categories (40 words each).
 `order[].votes` in state is the **live current-round** count (updates as people
 vote) so each player shows a real-time vote badge during the vote phase.
 

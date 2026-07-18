@@ -5,6 +5,7 @@
    ========================================================= */
 const { WebSocketServer } = require("ws");
 const http = require("http");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
@@ -33,6 +34,40 @@ const CATEGORIES = [
 const CAT_INDEX = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 // normalise a client-supplied country to a 2-letter ISO code (or "" = hidden)
 const cc = s => String(s || "").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
+// ---- true IP geolocation (server-side) ----
+const geoCache = new Map();   // ip -> ISO-2 country ("" = unknown / private)
+const cleanIp = ip => String(ip || "").replace(/^::ffff:/, "").trim();
+function isPrivateIp(ip) {
+  ip = cleanIp(ip);
+  return !ip || ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.") ||
+    ip.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(ip) || ip.startsWith("169.254.") || ip.startsWith("fc") || ip.startsWith("fd");
+}
+// Resolve a client IP to its country via a free, key-less HTTPS lookup, cached
+// per-IP. Never throws; calls back with "" on any failure/timeout/private IP.
+function lookupCountry(ip, cb) {
+  ip = cleanIp(ip);
+  if (isPrivateIp(ip)) return cb("");
+  if (geoCache.has(ip)) return cb(geoCache.get(ip));
+  let done = false; const finish = c => { if (done) return; done = true; geoCache.set(ip, c); if (geoCache.size > 5000) geoCache.clear(); cb(c); };
+  try {
+    const req = https.get(`https://ipwho.is/${encodeURIComponent(ip)}?fields=country_code`, res => {
+      let d = ""; res.on("data", c => { d += c; if (d.length > 4000) req.destroy(); });
+      res.on("end", () => { let code = ""; try { const j = JSON.parse(d); if (j && j.country_code) code = cc(j.country_code); } catch (e) {} finish(code); });
+    });
+    req.on("error", () => finish(""));
+    req.setTimeout(2500, () => { req.destroy(); finish(""); });
+  } catch (e) { finish(""); }
+}
+// Resolve a player's TRUE country from their IP and patch it into the room state
+// (keeps the locale fallback if the lookup fails / is a private IP).
+function resolveCountry(room, pid, ip) {
+  lookupCountry(ip, code => {
+    if (!code) return;
+    const r = rooms.get(room.code); if (!r) return;
+    const p = r.players.get(pid); if (!p || p.country === code) return;
+    p.country = code; broadcast(r);
+  });
+}
 const PUBLIC_CATS = CATEGORIES.map(c => ({ id:c.id, emo:c.emo, name:c.name, count:c.words.length }));
 
 /* ---- helpers ---- */
@@ -501,9 +536,11 @@ const wss = new WebSocketServer({ server: httpServer });
 httpServer.listen(PORT, HOST);
 console.log(`NOCAP server listening on ${HOST}:${PORT}`);
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
   ws.isAlive = true;
   ws.on("pong", () => { ws.isAlive = true; });
+  // real client IP (Render/other proxies put it in x-forwarded-for)
+  const clientIp = cleanIp((req.headers["x-forwarded-for"] || "").split(",")[0]) || cleanIp(req.socket && req.socket.remoteAddress);
   let pid = null, roomCode = null;
 
   ws.on("message", (raw) => {
@@ -515,12 +552,14 @@ wss.on("connection", (ws) => {
       pid = uid();
       const room = makeRoom(pid);
       room.isPublic = !!msg.public;   // "Create public room" lists it in the browser
-      room.players.set(pid, { id: pid, name, ws, connected: true, country: cc(msg.country) });
+      const share = msg.share !== false && (!!msg.share || !!msg.country);   // opted in to show country
+      room.players.set(pid, { id: pid, name, ws, connected: true, country: share ? cc(msg.country) : "" });
       rooms.set(room.code, room);
       roomCode = room.code;
       ws.send(JSON.stringify({ type: "joined", code: room.code, youId: pid }));
       sysChat(room, `${name} joined the room`);
       broadcast(room);
+      if (share) resolveCountry(room, pid, clientIp);
       return;
     }
 
@@ -532,10 +571,12 @@ wss.on("connection", (ws) => {
       if (room.status !== "lobby") return sendErr(ws, "That game already started.");
       if (room.players.size >= MAX_PLAYERS) return sendErr(ws, `Room is full (${MAX_PLAYERS} max).`);
       pid = uid();
-      room.players.set(pid, { id: pid, name, ws, connected: true, country: cc(msg.country) });
+      const jShare = msg.share !== false && (!!msg.share || !!msg.country);
+      room.players.set(pid, { id: pid, name, ws, connected: true, country: jShare ? cc(msg.country) : "" });
       roomCode = code;
       ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
       sysChat(room, `${name} joined the room`);
+      if (jShare) resolveCountry(room, pid, clientIp);
       refreshAutoStart(room);
       broadcast(room);
       return;

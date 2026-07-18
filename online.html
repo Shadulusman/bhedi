@@ -1125,6 +1125,7 @@ function detectCountry(){
   return "";
 }
 function myCountry(){ const s = localStorage.getItem("nocap_country"); return s !== null ? s : detectCountry(); }
+function countryShared(){ return localStorage.getItem("nocap_country") !== ""; }   // null(default)/code = shown, "" = hidden
 // ISO-2 → flag emoji (regional indicator symbols). "" → no badge.
 function flagOf(cc){ cc = String(cc||"").toUpperCase(); if (!/^[A-Z]{2}$/.test(cc)) return "";
   return String.fromCodePoint(...[...cc].map(c => 127397 + c.charCodeAt(0))); }
@@ -1356,7 +1357,9 @@ function replayIntent(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
   if (sess && sess.code) { S.rejoinPending = true; send({ type:"rejoin", code:sess.code, youId:sess.youId }); return; }
   const p = S.pendingIntent;
-  if (p) send(p.type === "create" ? { type:"create", name:p.name, public:p.public, country:myCountry() } : { type:"join", code:p.code, name:p.name, country:myCountry() });
+  if (p) send(p.type === "create"
+    ? { type:"create", name:p.name, public:p.public, country:detectCountry(), share:countryShared() }
+    : { type:"join", code:p.code, name:p.name, country:detectCountry(), share:countryShared() });
 }
 // The game we were in is gone (server restarted / everyone left). Drop the stale
 // session so create/join works again instead of looping on a dead rejoin.
