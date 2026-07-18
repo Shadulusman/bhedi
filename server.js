@@ -95,6 +95,13 @@ function sanitize(room, pid) {
     autoStartAt: room.status === "lobby" ? room.autoStartAt : null,
     autoStartPaused: room.status === "lobby" ? room.autoStartPaused : false,
   };
+  // running session leaderboard, once any game has been scored (so the lobby can
+  // show the standings between games). Small; recomputed from current names.
+  if ([...room.scores.values()].some(v => v > 0)) {
+    base.standings = [...room.players.values()]
+      .map(p => ({ id: p.id, name: p.name, score: room.scores.get(p.id) || 0 }))
+      .sort((a, b) => b.score - a.score);
+  }
   if (room.status === "playing" || room.status === "voting") {
     const r = room.round;
     const amImp = r.imposterIds.has(pid);
