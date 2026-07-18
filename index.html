@@ -242,7 +242,38 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .rule .b p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
 
 .hidden{display:none !important;}
-@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;}}
+
+/* ==========================================================
+   PREMIUM MOTION LAYER (pass-and-play) — matches the online build.
+   transform/opacity only, GPU-friendly, disabled under reduced motion.
+   ========================================================== */
+:root{ --dur-fast:.16s; --dur:.28s; --dur-slow:.5s;
+  --ease-out:cubic-bezier(.2,.7,.2,1); --ease-spring:cubic-bezier(.34,1.56,.64,1); }
+#app{z-index:1;}
+.bg-fx{position:fixed;inset:-10%;z-index:0;pointer-events:none;overflow:hidden;filter:blur(60px);opacity:.55;}
+.bg-fx span{position:absolute;width:52vw;height:52vw;max-width:460px;max-height:460px;border-radius:50%;will-change:transform;}
+.bg-fx span:nth-child(1){left:-8vw;top:-6vh;background:radial-gradient(circle,rgba(225,29,42,.5),transparent 70%);animation:blob1 22s ease-in-out infinite;}
+.bg-fx span:nth-child(2){right:-10vw;top:32vh;background:radial-gradient(circle,rgba(30,127,224,.42),transparent 70%);animation:blob2 27s ease-in-out infinite;}
+.bg-fx span:nth-child(3){left:18vw;bottom:-14vh;background:radial-gradient(circle,rgba(112,72,232,.32),transparent 70%);animation:blob3 31s ease-in-out infinite;}
+@keyframes blob1{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(6vw,4vh,0) scale(1.12);}}
+@keyframes blob2{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-5vw,-5vh,0) scale(1.15);}}
+@keyframes blob3{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(4vw,-3vh,0) scale(.9);}}
+.cta,.iconbtn,.mode-btn,.mode-card,.cat,.peek{transition:transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur) var(--ease-out), background var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);will-change:transform;position:relative;}
+.cta{overflow:hidden;}
+@media (hover:hover){
+  .cta:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.04);box-shadow:0 18px 44px -10px rgba(225,29,42,.5);}
+  .iconbtn:hover{transform:translateY(-1px);border-color:var(--gold);color:var(--gold);}
+  .mode-card:hover,.cat:hover{transform:translateY(-2px);box-shadow:0 16px 34px -16px rgba(20,24,40,.4);}
+}
+.cta:not(:disabled):active{transform:scale(.96);transition-duration:.06s;}
+.iconbtn:active,.mode-btn:active,.mode-card:active,.cat:active,.peek:active{transform:scale(.93);transition-duration:.06s;}
+:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(30,127,224,.55);}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.4);transform:scale(0);pointer-events:none;animation:ripple .6s var(--ease-out) forwards;mix-blend-mode:overlay;}
+@keyframes ripple{to{transform:scale(2.6);opacity:0;}}
+.screen.active{animation:screenIn var(--dur-slow) var(--ease-out);}
+@keyframes screenIn{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(6px);}to{opacity:1;transform:none;filter:blur(0);}}
+
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;} .bg-fx{display:none;} .screen.active{animation:none;}}
 @media (max-height:680px){.hero h1{font-size:34px;} .pass-name{font-size:min(13vw,46px);}}
 
 /* ==========================================================
@@ -365,6 +396,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 </style>
 </head>
 <body>
+<div class="bg-fx" aria-hidden="true"><span></span><span></span><span></span></div>
 <div id="app">
 
   <!-- ============ HOME / SETUP ============ -->
@@ -555,6 +587,21 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 </div>
 
 <script>
+/* material ripple on primary buttons (they clip overflow) */
+(function(){
+  const rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.addEventListener("pointerdown", e => {
+    if (rm) return;
+    const btn = e.target.closest && e.target.closest(".cta:not(:disabled)");
+    if (!btn) return;
+    const r = btn.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.1;
+    const rip = document.createElement("span"); rip.className = "ripple";
+    rip.style.width = rip.style.height = d + "px";
+    rip.style.left = (e.clientX - r.left - d/2) + "px";
+    rip.style.top = (e.clientY - r.top - d/2) + "px";
+    btn.appendChild(rip); setTimeout(() => rip.remove(), 620);
+  }, { passive: true });
+})();
 /* =========================================================
    NOCAP · data
    ========================================================= */
